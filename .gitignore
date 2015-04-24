@@ -3,6 +3,11 @@
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
+# Compiled source #
+###################
+web-app/WEB-INF/classes
+*.class
+
 # Package Files #
 *.jar
 *.war
@@ -10,3 +15,35 @@
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+
+#  Build dir #
+###################
+target
+tmp
+data
+out
+/bin/
+
+# OS generated files #
+######################
+.DS_Store
+ehthumbs.db
+Icon?
+Thumbs.db
+
+
+# IDE (Eclipse) files #
+#######################
+.classpath
+.project
+.settings
+.idea
+*.iml
+.idea/*
+
+# Ignore backup files #
+#######################
+*.bak
+/design/
+/run.txt
+
