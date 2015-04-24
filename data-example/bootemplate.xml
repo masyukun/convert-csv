@@ -1,0 +1,5 @@
+<boo>
+  <name>{Name}</name>
+  <address>{Email}</address>
+  <mobile>{Phone Number}</mobile>
+</boo>
