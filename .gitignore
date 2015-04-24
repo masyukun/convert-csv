@@ -23,6 +23,7 @@ tmp
 data
 out
 /bin/
+/lib/
 
 # OS generated files #
 ######################
