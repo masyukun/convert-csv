@@ -41,18 +41,11 @@ public class ConvertCSV {
 
 	
 	/**
-	 * Parameterless way to print the help screen as an error message, then exit with 0.
-	 */
-	public static void callForHelp(){
-		callForHelp(options);
-	}
-	
-	/**
 	 * Display the command-line help menu, then quit.
 	 * 
 	 * @param options Options data structure defining valid options.
 	 */
-	public static void callForHelp(Options options) {
+	public static void callForHelp() {
 		// generate the help statement
 		HelpFormatter formatter = new HelpFormatter();
 		formatter.printHelp( Class.class.getName(), options );
@@ -134,6 +127,7 @@ public class ConvertCSV {
                 .withDescription( "Filename to store converted content." )
                 .hasArg().withArgName("OUTPUTFILENAME").create() );
 	}
+	
 	
 	/**
 	 * Load the options specified on the command line.
