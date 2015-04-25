@@ -1,15 +1,10 @@
 package com.matthewroyal.marklogic.semantics;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.HashMap;
 import java.util.Properties;
 
 import org.apache.commons.cli.CommandLine;
@@ -21,18 +16,20 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 
 public class ConvertCSV {
 
+	private static final Logger logger = LogManager.getLogger(Class.class.getName()); 	
+	
 	private static Options options;
 	
-	private static String defaultPropertiesFilename = "convertCsv.properties";
-	private static String defaultOutputFormat = "";
+	private static final String DEFAULT_PROPERTIES_FILENAME = "convertCsv.properties";
+	private static final String DEFAULT_OUTPUT_FORMAT = "";
 	
-	private static String propsFilename = defaultPropertiesFilename;
-	private static String outputFormat = defaultOutputFormat;
+	private static String outputFormat = DEFAULT_OUTPUT_FORMAT;
 	private static String outputFilename = null;
 	private static String csvFilename = null;
 	private static Boolean hasHeaderInFile = false;
@@ -44,27 +41,11 @@ public class ConvertCSV {
 
 	
 	/**
-	 * Read a file's contents into a String
-	 * @param file String filename for a file
-	 * @return String contents of file
-	 * @throws IOException
+	 * Parameterless way to print the help screen as an error message, then exit with 0.
 	 */
-	private static String readFile( String file ) throws IOException {
-	    BufferedReader reader = new BufferedReader( new FileReader (file));
-	    String         line = null;
-	    StringBuilder  stringBuilder = new StringBuilder();
-	    String         ls = System.getProperty("line.separator");
-
-	    while( ( line = reader.readLine() ) != null ) {
-	        stringBuilder.append( line );
-	        stringBuilder.append( ls );
-	    }
-
-	    reader.close();
-	    
-	    return stringBuilder.toString();
+	public static void callForHelp(){
+		callForHelp(options);
 	}
-	
 	
 	/**
 	 * Display the command-line help menu, then quit.
@@ -86,52 +67,12 @@ public class ConvertCSV {
 	 * @param userDefinedHeader String define your own column as a comma separated String.
 	 * @param templateFilname String representing the template filename on disk.
 	 */
-	public static void writeCsvUsingTemplate(String csvFilename, Boolean hasHeaderInFile, String userDefinedHeader) {
-		CSVParser parser;
-		Integer numLines = 0;
-		
-		
-		// Default output filename
-		if (null == outputFilename && null != csvFilename) {
-			outputFilename = csvFilename + ".out";
-		}
-	
-		
-		// Load template file as a String
-		String templateFile = null;
-		
-		try {
-			templateFile = readFile(templateFilename);
-			
-		} catch (IOException e) {
-			System.out.printf("ERROR: Template file '%s' doesn't exist or can't be opened!\n\n", templateFilename);
-			callForHelp(options);
-		}
-		
-		
-		// Create the output file, if it doesn't exist
-		File outputFile;
-		FileWriter fw;
-		BufferedWriter bw = null;
-		try {
-			outputFile = new File(outputFilename);
-			if (!outputFile.exists()) { outputFile.createNewFile(); }
-			fw = new FileWriter(outputFile.getAbsoluteFile());
-			bw = new BufferedWriter(fw);
-		} catch (NullPointerException npe) {
-			System.out.printf("ERROR: Failed creating Output filename '%s'!\n\n", outputFilename);
-			callForHelp(options);
-		} catch (IOException e) {
-			System.out.printf("ERROR: The output file '%s' exists, but \n"
-					+ "  1) is a directory rather than a regular file, \n"
-					+ "  2) does not exist but cannot be created, or \n"
-					+ "  3) cannot be opened for some other reason", outputFilename);
-			callForHelp(options);
-		}
-	
+	public static void parseCSV(OutputFormat output) {
 		
 		// Create the CSV Parser
+		CSVParser parser;
 		try {
+			// Build CSV parser with the specified options
 			parser = new CSVParser(
 				new FileReader(csvFilename),
 				(hasHeaderInFile) 
@@ -140,64 +81,33 @@ public class ConvertCSV {
 							? CSVFormat.DEFAULT.withHeader( userDefinedHeader ) 
 							: null));
 
-			HashMap<String,Integer> header = (HashMap<String, Integer>) parser.getHeaderMap();
-		
-			
-			// Write the header, if applicable
-			if (null != templateHeader && templateHeader.length() > 0)
-				bw.write(templateHeader);
-			
-			// Parse the CSV file
-			for (CSVRecord record : parser) {
-
-				String rowFile = new String(templateFile);
-
-				// Parse each value in header
-				for (String h : header.keySet()) {
-//					System.out.printf("  Reading column [%s]: %s\n", h, record.get(h));
-					rowFile = rowFile.replaceAll("\\{"+h+"\\}", record.get(h));
-				}
-
-				System.out.println(rowFile);
-				bw.write(rowFile);
-				
-				++numLines;
-		    }
-			parser.close();
-
-			// Write the footer, if applicable
-			if (null != templateFooter && templateFooter.length() > 0)
-				bw.write(templateFooter);
-
-			bw.close();
-			
+			// Write the new data file
+			output.write(parser);
 		    
+			
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(String.format("ERROR: Failed to find input CSV file '%s'.", csvFilename));
+			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(String.format("ERROR: The output file '%s' exists, but \n"
+					+ "  1) is a directory rather than a regular file, \n"
+					+ "  2) does not exist but cannot be created, or \n"
+					+ "  3) cannot be opened for some other reason", outputFilename));
+			callForHelp();
 		}
 
 	}
 	
 	
-	
-	
-	
-	
-	
-	
-	
+	/**
+	 * Build the options accepted on the command line
+	 */
 	@SuppressWarnings("static-access")
-	public static void main(String[] args) {
-
+	private static void buildCLIOptions() {
 		// Define the command-line options
-		CommandLine cmd;
 		options = new Options();
 		options.addOption( OptionBuilder.withLongOpt( "properties-file" )
-                .withDescription( String.format("set properties file name [%s]", defaultPropertiesFilename) )
+                .withDescription( String.format("set properties file name [%s]", DEFAULT_PROPERTIES_FILENAME) )
                 .hasArg().withArgName("FILENAME").create() );
 		options.addOption( OptionBuilder.withLongOpt( "csv-filename" )
                 .withDescription( "File name of the CSV file to read as input." )
@@ -223,16 +133,26 @@ public class ConvertCSV {
 		options.addOption( OptionBuilder.withLongOpt( "output-filename" )
                 .withDescription( "Filename to store converted content." )
                 .hasArg().withArgName("OUTPUTFILENAME").create() );
-		
+	}
+	
+	/**
+	 * Load the options specified on the command line.
+	 * @param args String[] command line options from main(String[] args) function
+	 * @return String properties filename, if specified
+	 */
+	private static String loadCLIOptions(String[] args) {
 				
+		String propsFilename = null;
+		
 		// Read in command-line options
+		CommandLine cmd;
 		CommandLineParser parser = new GnuParser();
 		try {
 			cmd = parser.parse( options, args);
 		
 			// Get properties filename
 		    if (cmd.hasOption( "properties-file" )) { propsFilename = cmd.getOptionValue( "properties-file" ); }
-		    
+			    
 		    // Get other run-time options
 		    if (cmd.hasOption( "csv-filename" ))    { csvFilename = cmd.getOptionValue( "csv-filename" ); }
 		    if (cmd.hasOption( "has-header" ))      { hasHeaderInFile = true; }
@@ -243,14 +163,19 @@ public class ConvertCSV {
 		    if (cmd.hasOption( "output-format" ))   { outputFormat = cmd.getOptionValue( "output-format" ); }
 		    if (cmd.hasOption( "output-filename" )) { outputFilename = cmd.getOptionValue( "output-filename" ); }
 			
-			
 		} catch (ParseException e1) {
 			System.out.println("ERROR: Incoming arguments just aren't cutting the mustard!\n\n");
-			callForHelp(options);
+			callForHelp();
 		}
 		
-		
-		
+		return propsFilename;
+	}
+
+	
+	/**
+	 * Load properties from the specified properties file
+	 */
+	public static void loadProperties(String propsFilename) {
 		// Load properties file
 		File propFile = new File(propsFilename);
 		Properties properties = new Properties();
@@ -285,40 +210,50 @@ public class ConvertCSV {
 			e.printStackTrace();
 		}
 		
+	}
+	
+	
+	public static void main(String[] args) {
+
+		// Properties file overrides command-line options
+		buildCLIOptions();
+		loadProperties( loadCLIOptions(args) );
 		
+		
+		// Handle different output types
 	    switch(outputFormat) {
-	    case "XML":
-	    	System.out.printf("Output format [%s] not yet implemented.\n\n", outputFormat);
-	    	break;
-	    	
-	    case "SEMTRIPLE":
-	    	System.out.printf("Output format [%s] not yet implemented.\n\n", outputFormat);
-	    	break;
-	    	
-	    case "RDF":
-	    	System.out.printf("Output format [%s] not yet implemented.\n\n", outputFormat);
-	    	break;
-	    	
-	    case "TEMPLATE":
-	    	System.out.printf("Output format: [%s]\n\n", outputFormat);
-		    if (null == templateFilename) {
-		    	System.out.println("ERROR: Missing template-file definition!\n");
-				callForHelp(options);
-			}
-			
-	    	writeCsvUsingTemplate(csvFilename, hasHeaderInFile, userDefinedHeader);
-	    	break;
+
+		    case "JSON":
+		    	logger.error(String.format("Output format [%s] not yet implemented.\n\n", outputFormat));
+		    	break;
+		    	
+		    case "RDF":
+		    	logger.error(String.format("Output format [%s] not yet implemented.\n\n", outputFormat));
+		    	break;
+		    	
+		    case "SEMTRIPLE":
+		    	logger.error(String.format("Output format [%s] not yet implemented.\n\n", outputFormat));
+		    	break;
+		    	
+		    case "TEMPLATE":
+		    	logger.info(String.format("Output format: [%s]\n\n", outputFormat));
+			    if (null == templateFilename) {
+			    	System.out.println("ERROR: Missing template-file definition!\n");
+					callForHelp();
+				}
+				
+		    	parseCSV(new OutputTemplate(outputFilename, templateFilename, templateHeader, templateFooter));
+		    	break;
+		    	
+		    case "XML":
+		    	logger.error(String.format("Output format [%s] not yet implemented.\n\n", outputFormat));
+		    	break;
 	    	
 	    	default:
-	    		callForHelp(options);
+	    		callForHelp();
 	    		break;
 	    }
 				
 	}
 
 }
-
-
-
-
-
