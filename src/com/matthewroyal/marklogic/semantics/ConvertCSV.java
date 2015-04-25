@@ -3,6 +3,7 @@ package com.matthewroyal.marklogic.semantics;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -28,7 +29,7 @@ public class ConvertCSV {
 	private static Options options;
 	
 	private static String defaultPropertiesFilename = "convertCsv.properties";
-	private static String defaultOutputFormat = "XML";
+	private static String defaultOutputFormat = "";
 	
 	private static String propsFilename = defaultPropertiesFilename;
 	private static String outputFormat = defaultOutputFormat;
@@ -37,7 +38,8 @@ public class ConvertCSV {
 	private static Boolean hasHeaderInFile = false;
 	private static String userDefinedHeader = null;
 	private static String templateFilename = null;
-
+	private static String templateHeader = "";
+	private static String templateFooter = "";
 	
 
 	
@@ -102,7 +104,7 @@ public class ConvertCSV {
 			templateFile = readFile(templateFilename);
 			
 		} catch (IOException e) {
-			System.out.printf("ERROR: Template file '%s' doesn't exist or can't be opened!", templateFilename);
+			System.out.printf("ERROR: Template file '%s' doesn't exist or can't be opened!\n\n", templateFilename);
 			callForHelp(options);
 		}
 		
@@ -141,14 +143,15 @@ public class ConvertCSV {
 			HashMap<String,Integer> header = (HashMap<String, Integer>) parser.getHeaderMap();
 		
 			
+			// Write the header, if applicable
+			if (null != templateHeader && templateHeader.length() > 0)
+				bw.write(templateHeader);
+			
 			// Parse the CSV file
 			for (CSVRecord record : parser) {
 
 				String rowFile = new String(templateFile);
 
-//				System.out.printf("Reading record %d....\n", numLines + 1);
-			
-				
 				// Parse each value in header
 				for (String h : header.keySet()) {
 //					System.out.printf("  Reading column [%s]: %s\n", h, record.get(h));
@@ -161,6 +164,11 @@ public class ConvertCSV {
 				++numLines;
 		    }
 			parser.close();
+
+			// Write the footer, if applicable
+			if (null != templateFooter && templateFooter.length() > 0)
+				bw.write(templateFooter);
+
 			bw.close();
 			
 		    
@@ -203,6 +211,12 @@ public class ConvertCSV {
 		options.addOption( OptionBuilder.withLongOpt( "template-file" )
                 .withDescription( "File name of template file to use." )
                 .hasArg().withArgName("TEMPLATEFILENAME").create() );
+		options.addOption( OptionBuilder.withLongOpt( "template-header" )
+                .withDescription( "Header content to insert at the beginning of each template output file." )
+                .hasArg().withArgName("HEADER").create() );
+		options.addOption( OptionBuilder.withLongOpt( "template-footer" )
+                .withDescription( "Footer content to insert at the end of each template output file." )
+                .hasArg().withArgName("FOOTER").create() );
 		options.addOption( OptionBuilder.withLongOpt( "output-format" )
                 .withDescription( "Type to convert into: RDF, SEMTRIPLE, TEMPLATE, XML" )
                 .hasArg().withArgName("TYPE").create() );
@@ -224,36 +238,49 @@ public class ConvertCSV {
 		    if (cmd.hasOption( "has-header" ))      { hasHeaderInFile = true; }
 		    if (cmd.hasOption( "define-header" ))   { userDefinedHeader = cmd.getOptionValue( "define-header" ); }
 		    if (cmd.hasOption( "template-file" ))   { templateFilename = cmd.getOptionValue( "template-file" ); }
+		    if (cmd.hasOption( "template-header" )) { templateHeader = cmd.getOptionValue( "template-header" ); }
+		    if (cmd.hasOption( "template-footer" )) { templateFooter = cmd.getOptionValue( "template-footer" ); }
 		    if (cmd.hasOption( "output-format" ))   { outputFormat = cmd.getOptionValue( "output-format" ); }
 		    if (cmd.hasOption( "output-filename" )) { outputFilename = cmd.getOptionValue( "output-filename" ); }
 			
 			
 		} catch (ParseException e1) {
-			System.out.println("ERROR: Incoming arguments just aren’t cutting the mustard!\n\n");
+			System.out.println("ERROR: Incoming arguments just aren't cutting the mustard!\n\n");
 			callForHelp(options);
 		}
 		
 		
+		
 		// Load properties file
-		Properties prop = new Properties();
-		InputStream in = ConvertCSV.class.getResourceAsStream(propsFilename);
+		File propFile = new File(propsFilename);
+		Properties properties = new Properties();
+
 		try {
-			prop.load(in);
-			
+			FileInputStream propertiesFI = new FileInputStream(propFile);
+			properties.load(propertiesFI);
+				
 			// Get properties filename
-		    if (prop.containsKey( "csv-filename" ))    { csvFilename = prop.getProperty( "csv-filename" ); }
-		    if (prop.containsKey( "has-header" ))      { hasHeaderInFile = true; }
-		    if (prop.containsKey( "define-header" ))   { userDefinedHeader = prop.getProperty( "define-header" ); }
-		    if (prop.containsKey( "template-file" ))   { templateFilename = prop.getProperty( "template-file" ); } 
-		    if (prop.containsKey( "output-format" ))   { outputFormat = prop.getProperty( "output-format" ); }
-		    if (prop.containsKey( "output-filename" )) { outputFilename = prop.getProperty( "output-filename" ); }
+		    if (properties.containsKey( "csv-filename" ))    { csvFilename = properties.getProperty( "csv-filename" ); }
+		    if (properties.containsKey( "has-header" ))      { hasHeaderInFile = true; }
+		    if (properties.containsKey( "define-header" ))   { userDefinedHeader = properties.getProperty( "define-header" ); }
+		    if (properties.containsKey( "template-file" ))   { templateFilename = properties.getProperty( "template-file" ); } 
+		    if (properties.containsKey( "template-header" )) { templateHeader = properties.getProperty( "template-header" ); }
+		    if (properties.containsKey( "template-footer" )) { templateFooter = properties.getProperty( "template-footer" ); }
+		    if (properties.containsKey( "output-format" ))   { outputFormat = properties.getProperty( "output-format" ); }
+		    if (properties.containsKey( "output-filename" )) { outputFilename = properties.getProperty( "output-filename" ); }
+
+		    // Close properties file
+		    propertiesFI.close();
 			
-			in.close();
-			
+		} catch (SecurityException se) {
+			System.out.printf("ERROR: Security restrictions are denying read access to the properties file '%s'.", propsFilename);
 		} catch (NullPointerException npe) {
+			System.out.printf("WARNING: That properties file '%s' doesn't exist!\n\n", propsFilename);
+		} catch (FileNotFoundException fnf) {
 			System.out.printf("WARNING: That properties file '%s' doesn't exist!\n\n", propsFilename);
 		} catch (IllegalArgumentException iae) {
 			System.out.printf("ERROR: Sweet biscuits of mercy! The properties file '%s' contains a malformed Unicode escape sequence!\n\n", propsFilename);
+			System.exit(0);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
