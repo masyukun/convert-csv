@@ -74,8 +74,9 @@ public class ConvertCSV {
 							? CSVFormat.DEFAULT.withHeader( userDefinedHeader ) 
 							: null));
 
-			logger.error(String.format("CSV file '%s' contains %d lines.", csvFilename, output.countLineNumber(csvFilename)));
+			
 			// Write the new data file
+			output.countLineNumber(csvFilename);
 			output.transformToFormat(parser);
 			if (null != parser) {
 				parser.close();
@@ -241,8 +242,11 @@ public class ConvertCSV {
 					callForHelp();
 				}
 				
-		    	parseCSV(new OutputTemplate(outputFilename, templateFilename, templateHeader, templateFooter));
-		    	break;
+			    OutputFormat output = new OutputTemplate(outputFilename, templateFilename, templateHeader, templateFooter);
+		    	OutputMonitor monitor = new OutputMonitor(output, 20);
+		    	parseCSV(output);
+		    	monitor.cancel();
+			    break;
 		    	
 		    case "XML":
 		    	logger.error(String.format("Output format [%s] not yet implemented.\n\n", outputFormat));

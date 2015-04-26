@@ -24,6 +24,7 @@ data
 out
 /bin/
 /lib/
+/data-example/
 
 # OS generated files #
 ######################

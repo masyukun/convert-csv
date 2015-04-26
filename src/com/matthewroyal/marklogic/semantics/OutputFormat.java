@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.LineNumberReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.lang3.StringUtils;
@@ -23,6 +24,7 @@ public abstract class OutputFormat {
 	private static final Integer MAX_NAME_ATTEMPTS = 100;
 	private static final String DEFAULT_OUTPUT_FILENAME = "outputFile.1.out";
 	
+	protected static int totalLinesInCsv = 0;
 	protected static Long totalProcessedRecordCount = 0L;
 	protected static Integer numRecordsInCurrentFile = 0;
 	
@@ -30,7 +32,7 @@ public abstract class OutputFormat {
 	protected File outputFile = null;
 	protected FileWriter fw = null;
 	protected BufferedWriter bw = null;
-	protected Integer maxRecordsPerFile = 100;
+	protected Integer maxRecordsPerFile = 1000000;
 	
 	
 	OutputFormat() {
@@ -59,17 +61,15 @@ public abstract class OutputFormat {
 	 * @param filename String filename of the file to open and count
 	 * @return Integer number of lines in the file
 	 */
-	public Integer countLineNumber(String filename) {
+	public int countLineNumber(String filename) {
 		
-		int lines = 0;
-		 
 		try {
 			File file = new File(filename);
 			//BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 			   
 			LineNumberReader lineNumberReader = new LineNumberReader(new FileReader(file));
 			lineNumberReader.skip(Long.MAX_VALUE);
-			lines = lineNumberReader.getLineNumber();
+			totalLinesInCsv = lineNumberReader.getLineNumber();
 			lineNumberReader.close();
    
 		} catch (FileNotFoundException e) {
@@ -79,7 +79,7 @@ public abstract class OutputFormat {
 			logger.error("IOException Occured", e);
 		}
 
-		return lines;
+		return totalLinesInCsv;
 
 	}
 
@@ -255,6 +255,15 @@ public abstract class OutputFormat {
 		// Good night, Gracie.
 	}
 	
+	public void printJobStatus() {
+		if (null != maxRecordsPerFile && maxRecordsPerFile > 0 && totalLinesInCsv > 0)
+		System.out.printf("[%s] %.2f%% transforming CSV into %d output files: %s\n", 
+				(new Date()).toString(),
+				(totalProcessedRecordCount/(double)totalLinesInCsv)*100,
+				(long)Math.ceil(totalLinesInCsv/maxRecordsPerFile),
+				outputFilename);
+	}
+	
 	/**
 	 * Write a record to the file.
 	 * Keeps track of the record count to manage file-splitting.
@@ -283,3 +292,6 @@ public abstract class OutputFormat {
 	
 	
 }
+
+
+
