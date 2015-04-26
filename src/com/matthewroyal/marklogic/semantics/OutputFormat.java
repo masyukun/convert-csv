@@ -2,8 +2,11 @@ package com.matthewroyal.marklogic.semantics;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.LineNumberReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -20,6 +23,8 @@ public abstract class OutputFormat {
 	private static final Integer MAX_NAME_ATTEMPTS = 100;
 	private static final String DEFAULT_OUTPUT_FILENAME = "outputFile.1.out";
 	
+	protected static final Integer recordCount = 0;
+	
 	protected String outputFilename = null;
 	protected File outputFile = null;
 	protected FileWriter fw = null;
@@ -31,7 +36,7 @@ public abstract class OutputFormat {
 		if (null == outputFilename)
 			outputFilename = DEFAULT_OUTPUT_FILENAME;
 		
-		createOutputFile(outputFilename);
+		outputFilename = createOutputFile(outputFilename);
 	}
 		
 	OutputFormat(String outputFilename) {
@@ -40,7 +45,7 @@ public abstract class OutputFormat {
 		else
 			this.outputFilename = outputFilename;
 		
-		createOutputFile(this.outputFilename);
+		outputFilename = createOutputFile(this.outputFilename);
 	}
 
 	
@@ -52,7 +57,44 @@ public abstract class OutputFormat {
 	}
 	
 	
-	public void createOutputFile(String outputFilename) {
+	/**
+	 * Quickly count the lines in a file.
+	 * @param filename String filename of the file to open and count
+	 * @return Integer number of lines in the file
+	 */
+	public Integer countLineNumber(String filename) {
+		
+		int lines = 0;
+		 
+		try {
+			File file = new File(filename);
+			//BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+			   
+			LineNumberReader lineNumberReader = new LineNumberReader(new FileReader(file));
+			lineNumberReader.skip(Long.MAX_VALUE);
+			lines = lineNumberReader.getLineNumber();
+			lineNumberReader.close();
+   
+		} catch (FileNotFoundException e) {
+			logger.error(String.format("ERROR: Could not count lines of file '%s' because FileNotFoundException Occured", filename)); 
+
+		} catch (IOException e) {
+			logger.error("IOException Occured", e);
+		}
+
+		return lines;
+
+	}
+
+	
+	/**
+	 * Create the output file using the output filename.
+	 * Finds the next available filename if it's already in use.
+	 * Will NOT overwrite existing data files.
+	 * @param outputFilename String filename of output file to write
+	 * @return String actual filename of output file
+	 */
+	public String createOutputFile(String outputFilename) {
 
 		// Create the output file, if it doesn't exist
 		Boolean needsGoodname = true;
@@ -84,11 +126,11 @@ public abstract class OutputFormat {
 			logger.error(String.format("ERROR: The output file '%s' exists, but \n"
 					+ "  1) is a directory rather than a regular file, \n"
 					+ "  2) does not exist but cannot be created, or \n"
-					+ "  3) cannot be opened for some other reason", outputFilename));
+					+ "  3) cannot be opened for some other reason", outputFilename), e);
 			ConvertCSV.callForHelp();
 		}
-		
 
+		return outputFilename;
 	}
 	
 	

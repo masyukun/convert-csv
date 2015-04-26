@@ -74,6 +74,7 @@ public class ConvertCSV {
 							? CSVFormat.DEFAULT.withHeader( userDefinedHeader ) 
 							: null));
 
+			logger.error(String.format("CSV file '%s' contains %d lines.", csvFilename, output.countLineNumber(csvFilename)));
 			// Write the new data file
 			output.write(parser);
 		    
@@ -85,7 +86,7 @@ public class ConvertCSV {
 			logger.error(String.format("ERROR: The output file '%s' exists, but \n"
 					+ "  1) is a directory rather than a regular file, \n"
 					+ "  2) does not exist but cannot be created, or \n"
-					+ "  3) cannot be opened for some other reason", outputFilename));
+					+ "  3) cannot be opened for some other reason", outputFilename), e);
 			callForHelp();
 		}
 
