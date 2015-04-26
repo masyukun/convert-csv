@@ -23,7 +23,8 @@ public abstract class OutputFormat {
 	private static final Integer MAX_NAME_ATTEMPTS = 100;
 	private static final String DEFAULT_OUTPUT_FILENAME = "outputFile.1.out";
 	
-	protected static final Integer recordCount = 0;
+	protected static Long totalProcessedRecordCount = 0L;
+	protected static Integer numRecordsInCurrentFile = 0;
 	
 	protected String outputFilename = null;
 	protected File outputFile = null;
@@ -35,8 +36,6 @@ public abstract class OutputFormat {
 	OutputFormat() {
 		if (null == outputFilename)
 			outputFilename = DEFAULT_OUTPUT_FILENAME;
-		
-		outputFilename = createOutputFile(outputFilename);
 	}
 		
 	OutputFormat(String outputFilename) {
@@ -44,8 +43,6 @@ public abstract class OutputFormat {
 			this.outputFilename = DEFAULT_OUTPUT_FILENAME;
 		else
 			this.outputFilename = outputFilename;
-		
-		outputFilename = createOutputFile(this.outputFilename);
 	}
 
 	
@@ -116,7 +113,15 @@ public abstract class OutputFormat {
 			} while (needsGoodname && nameAttempt <= MAX_NAME_ATTEMPTS);
 
 			// Fancy file-writing classes // TODO convert to stream?
+			if (null != fw) {
+				fw.close();
+				fw = null;
+			}
 			fw = new FileWriter(outputFile.getAbsoluteFile());
+			if (null != bw) {
+				bw.close();
+				bw = null;
+			}
 			bw = new BufferedWriter(fw);
 			
 		} catch (NullPointerException npe) {
@@ -217,8 +222,64 @@ public abstract class OutputFormat {
 	 * @param record CSVRecord to write to the output file
 	 * @return Integer number of records parsed from CSV file
 	 */
-	public abstract Integer write(CSVParser parser) throws IOException;
+	public abstract Integer transformToFormat(CSVParser parser) throws IOException;
 	
+	
+	protected abstract String customFileBeginning() throws IOException;
+	protected abstract String customFileEnding() throws IOException;
+	
+	
+	protected void beginNewFile() throws IOException {
+		outputFilename = createOutputFile(outputFilename);
+		bw.write(this.customFileBeginning());
+	}
+	
+	protected void endCurrentFile() throws IOException {
+
+		// Good night, BufferedWriter.
+		if (null != bw) {
+			// Write the output format's last wishes into the file
+			bw.write(this.customFileEnding());
+			
+			bw.flush();
+			bw.close();
+			bw = null;	
+		}
+
+		// Good night, FileWriter.
+		if (null != fw) {
+			fw.close();
+			fw = null;	
+		}
+
+		// Good night, Gracie.
+	}
+	
+	/**
+	 * Write a record to the file.
+	 * Keeps track of the record count to manage file-splitting.
+	 * 
+	 * @param recordToWrite String with record content
+	 * @throws IOException
+	 */
+	protected void write(String recordToWrite) throws IOException {
+		
+		// File opening
+		if (0 == numRecordsInCurrentFile) 
+			beginNewFile();
+		
+		
+		++totalProcessedRecordCount;
+		++numRecordsInCurrentFile;
+		
+		bw.write(recordToWrite);
+		
+		// Open a new file?
+		if (numRecordsInCurrentFile >= maxRecordsPerFile) {
+			endCurrentFile();
+			numRecordsInCurrentFile = 0;
+		}
+	}
 	
 	
 }

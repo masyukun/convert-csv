@@ -76,7 +76,11 @@ public class ConvertCSV {
 
 			logger.error(String.format("CSV file '%s' contains %d lines.", csvFilename, output.countLineNumber(csvFilename)));
 			// Write the new data file
-			output.write(parser);
+			output.transformToFormat(parser);
+			if (null != parser) {
+				parser.close();
+				parser = null;
+			}
 		    
 			
 		} catch (FileNotFoundException e) {

@@ -59,9 +59,26 @@ public class OutputTemplate extends OutputFormat {
 	    return stringBuilder.toString();
 	}
 	
+	
+	public String customFileBeginning() throws IOException {
+		// Write the header, if applicable
+		if (null != templateHeader && templateHeader.length() > 0)
+			return templateHeader;
+		
+		return null;
+	}
+	
+	public String customFileEnding() throws IOException {
+		// Write the footer, if applicable
+		if (null != templateFooter && templateFooter.length() > 0)
+			return templateFooter;
+
+		return null;
+	}
+	
 
 	@Override
-	public Integer write(CSVParser parser) throws IOException {
+	public Integer transformToFormat(CSVParser parser) throws IOException {
 
 		Integer numLines = 0;
 		
@@ -77,10 +94,6 @@ public class OutputTemplate extends OutputFormat {
 		
 		HashMap<String,Integer> header = (HashMap<String, Integer>) parser.getHeaderMap();
 		
-		// Write the header, if applicable
-		if (null != templateHeader && templateHeader.length() > 0)
-			bw.write(templateHeader);
-		
 		// Transform the CSV file
 		for (CSVRecord record : parser) {
 
@@ -93,17 +106,11 @@ public class OutputTemplate extends OutputFormat {
 			}
 
 			logger.debug(rowFile);
-			bw.write(rowFile);
+			write(rowFile);
 			
 			++numLines;
 	    }
-		parser.close();
-
-		// Write the footer, if applicable
-		if (null != templateFooter && templateFooter.length() > 0)
-			bw.write(templateFooter);
-
-		bw.close();
+//		bw.close();
 			
 
 		return numLines;
