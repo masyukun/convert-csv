@@ -292,6 +292,12 @@ public abstract class OutputFormat {
 		if (numRecordsInCurrentFile >= maxRecordsPerFile) {
 			endCurrentFile();
 			numRecordsInCurrentFile = 0;
+			
+			// Some output format classes call their own output methods, and need a little help
+			if (this instanceof OutputXML) {
+				beginNewFile();
+				++numRecordsInCurrentFile;
+			}
 		}
 	}
 	

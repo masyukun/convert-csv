@@ -42,7 +42,12 @@ public class ConvertCSV {
 	private static String templateFilename = null;
 	private static String templateHeader = "";
 	private static String templateFooter = "";
-	
+
+	// XML settings
+	private static String namespace = null;
+	private static String namespacePrefix = null;
+	private static String rootElementName = null;
+	private static String recordElementName = null;	
 
 	
 	/**
@@ -138,6 +143,20 @@ public class ConvertCSV {
 		options.addOption( OptionBuilder.withLongOpt( "output-filename" )
                 .withDescription( "Filename to store converted content." )
                 .hasArg().withArgName("OUTPUTFILENAME").create() );
+		
+		options.addOption( OptionBuilder.withLongOpt( "xml-namespace" )
+                .withDescription( "Default namespace URI for XML output file." )
+                .hasArg().withArgName("URI").create() );
+		options.addOption( OptionBuilder.withLongOpt( "xml-namespace-prefix" )
+                .withDescription( "Prefix name for XML default namespace." )
+                .hasArg().withArgName("PREFIX").create() );
+		options.addOption( OptionBuilder.withLongOpt( "xml-root" )
+                .withDescription( "Element name for root of XML output file." )
+                .hasArg().withArgName("ELEMENTNAME").create() );
+		options.addOption( OptionBuilder.withLongOpt( "xml-record" )
+                .withDescription( "Element name for each output CSV record." )
+                .hasArg().withArgName("ELEMENTNAME").create() );
+		
 	}
 	
 	
@@ -170,7 +189,12 @@ public class ConvertCSV {
 
 		    if (cmd.hasOption( "output-format" ))   { outputFormat = cmd.getOptionValue( "output-format" ); }
 		    if (cmd.hasOption( "output-filename" )) { outputFilename = cmd.getOptionValue( "output-filename" ); }
-			
+		
+		    if (cmd.hasOption( "xml-namespace" ))        { namespace = cmd.getOptionValue( "xml-namespace" ); }
+		    if (cmd.hasOption( "xml-namespace-prefix" )) { namespacePrefix= cmd.getOptionValue( "xml-namespace-prefix" ); }
+		    if (cmd.hasOption( "xml-root" ))             { rootElementName = cmd.getOptionValue( "xml-root" ); }
+		    if (cmd.hasOption( "xml-record" ))           { recordElementName = cmd.getOptionValue( "xml-record" ); }
+		    
 		} catch (ParseException e1) {
 			System.out.println("ERROR: Incoming arguments just aren't cutting the mustard!\n\n");
 			callForHelp();
@@ -203,6 +227,11 @@ public class ConvertCSV {
 		    
 		    if (properties.containsKey( "output-format" ))   { outputFormat = properties.getProperty( "output-format" ); }
 		    if (properties.containsKey( "output-filename" )) { outputFilename = properties.getProperty( "output-filename" ); }
+
+		    if (properties.containsKey( "xml-namespace" ))        { namespace = properties.getProperty( "xml-namespace" ); }
+		    if (properties.containsKey( "xml-namespace-prefix" )) { namespacePrefix = properties.getProperty( "xml-namespace-prefix" ); }
+		    if (properties.containsKey( "xml-root" ))             { rootElementName = properties.getProperty( "xml-root" ); }
+		    if (properties.containsKey( "xml-record" ))           { recordElementName = properties.getProperty( "xml-record" ); }
 
 		    // Close properties file
 		    propertiesFI.close();
@@ -263,7 +292,12 @@ public class ConvertCSV {
 			    break;
 		    	
 		    case "XML":
-		    	logger.error(String.format("Output format [%s] not yet implemented.\n\n", outputFormat));
+		    	logger.info(String.format("Output format [%s]\n", outputFormat));
+		    	
+		    	output = new OutputXML(outputFilename, namespace, namespacePrefix, rootElementName, recordElementName);
+		    	monitor = new OutputMonitor(output, 5);
+		    	parseCSV(output);
+		    	monitor.cancel();
 		    	break;
 	    	
 	    	default:
