@@ -19,7 +19,7 @@ import org.apache.logging.log4j.Logger;
 
 public abstract class OutputFormat {
 
-	private static final Logger logger = LogManager.getLogger(Class.class.getName()); 	
+	private static final Logger logger = LogManager.getLogger(OutputFormat.class.getName()); 	
 
 	private static final Integer MAX_NAME_ATTEMPTS = 100;
 	private static final String DEFAULT_OUTPUT_FILENAME = "outputFile.1.out";
@@ -257,11 +257,14 @@ public abstract class OutputFormat {
 	
 	public void printJobStatus() {
 		if (null != maxRecordsPerFile && maxRecordsPerFile > 0 && totalLinesInCsv > 0)
-		System.out.printf("[%s] %.2f%% transforming CSV into %d output files: %s\n", 
+			System.out.printf("[%s] %.2f%% transforming CSV into %d output files: %s\n", 
 				(new Date()).toString(),
 				(totalProcessedRecordCount/(double)totalLinesInCsv)*100,
 				(long)Math.ceil(totalLinesInCsv/maxRecordsPerFile),
 				outputFilename);
+		else
+			System.out.printf("[%s] 0.00%% Beginning transform of CSV into output files.\n", 
+				(new Date()).toString() );
 	}
 	
 	/**
@@ -277,11 +280,13 @@ public abstract class OutputFormat {
 		if (0 == numRecordsInCurrentFile) 
 			beginNewFile();
 		
-		
+		// Tally up all the writes
 		++totalProcessedRecordCount;
 		++numRecordsInCurrentFile;
 		
-		bw.write(recordToWrite);
+		// Write the record
+		if (null != recordToWrite)
+			bw.write(recordToWrite);
 		
 		// Open a new file?
 		if (numRecordsInCurrentFile >= maxRecordsPerFile) {

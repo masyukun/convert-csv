@@ -22,18 +22,23 @@ import org.apache.logging.log4j.Logger;
 
 public class ConvertCSV {
 
-	private static final Logger logger = LogManager.getLogger(Class.class.getName()); 	
+	private static final Logger logger = LogManager.getLogger(ConvertCSV.class.getName()); 	
 	
 	private static Options options;
 	
 	private static final String DEFAULT_PROPERTIES_FILENAME = "convertCsv.properties";
 	private static final String DEFAULT_OUTPUT_FORMAT = "";
 	
+	// Output settings
 	private static String outputFormat = DEFAULT_OUTPUT_FORMAT;
 	private static String outputFilename = null;
+	
+	// CSV input settings
 	private static String csvFilename = null;
 	private static Boolean hasHeaderInFile = false;
 	private static String userDefinedHeader = null;
+	
+	// TEMPLATE settings
 	private static String templateFilename = null;
 	private static String templateHeader = "";
 	private static String templateFooter = "";
@@ -117,6 +122,7 @@ public class ConvertCSV {
 		options.addOption( OptionBuilder.withLongOpt( "define-header" )
                 .withDescription( "Specify the header by command line with comma separated list. \"ColumnID,Column1,Column2,Column3\"" )
                 .hasArg().withArgName("DEFINITION-STRING").create() );
+
 		options.addOption( OptionBuilder.withLongOpt( "template-file" )
                 .withDescription( "File name of template file to use." )
                 .hasArg().withArgName("TEMPLATEFILENAME").create() );
@@ -157,9 +163,11 @@ public class ConvertCSV {
 		    if (cmd.hasOption( "csv-filename" ))    { csvFilename = cmd.getOptionValue( "csv-filename" ); }
 		    if (cmd.hasOption( "has-header" ))      { hasHeaderInFile = true; }
 		    if (cmd.hasOption( "define-header" ))   { userDefinedHeader = cmd.getOptionValue( "define-header" ); }
+
 		    if (cmd.hasOption( "template-file" ))   { templateFilename = cmd.getOptionValue( "template-file" ); }
 		    if (cmd.hasOption( "template-header" )) { templateHeader = cmd.getOptionValue( "template-header" ); }
 		    if (cmd.hasOption( "template-footer" )) { templateFooter = cmd.getOptionValue( "template-footer" ); }
+
 		    if (cmd.hasOption( "output-format" ))   { outputFormat = cmd.getOptionValue( "output-format" ); }
 		    if (cmd.hasOption( "output-filename" )) { outputFilename = cmd.getOptionValue( "output-filename" ); }
 			
@@ -188,9 +196,11 @@ public class ConvertCSV {
 		    if (properties.containsKey( "csv-filename" ))    { csvFilename = properties.getProperty( "csv-filename" ); }
 		    if (properties.containsKey( "has-header" ))      { hasHeaderInFile = true; }
 		    if (properties.containsKey( "define-header" ))   { userDefinedHeader = properties.getProperty( "define-header" ); }
+
 		    if (properties.containsKey( "template-file" ))   { templateFilename = properties.getProperty( "template-file" ); } 
 		    if (properties.containsKey( "template-header" )) { templateHeader = properties.getProperty( "template-header" ); }
 		    if (properties.containsKey( "template-footer" )) { templateFooter = properties.getProperty( "template-footer" ); }
+		    
 		    if (properties.containsKey( "output-format" ))   { outputFormat = properties.getProperty( "output-format" ); }
 		    if (properties.containsKey( "output-filename" )) { outputFilename = properties.getProperty( "output-filename" ); }
 
@@ -215,6 +225,10 @@ public class ConvertCSV {
 	
 	public static void main(String[] args) {
 
+		OutputFormat output;
+    	OutputMonitor monitor;
+    	
+    	
 		// Properties file overrides command-line options
 		buildCLIOptions();
 		loadProperties( loadCLIOptions(args) );
@@ -224,26 +238,26 @@ public class ConvertCSV {
 	    switch(outputFormat) {
 
 		    case "JSON":
-		    	logger.error(String.format("Output format [%s] not yet implemented.\n\n", outputFormat));
+		    	logger.info(String.format("Output format [%s] not yet implemented.\n\n", outputFormat));
 		    	break;
 		    	
 		    case "RDF":
-		    	logger.error(String.format("Output format [%s] not yet implemented.\n\n", outputFormat));
+		    	logger.info(String.format("Output format [%s] not yet implemented.\n\n", outputFormat));
 		    	break;
 		    	
 		    case "SEMTRIPLE":
-		    	logger.error(String.format("Output format [%s] not yet implemented.\n\n", outputFormat));
+		    	logger.info(String.format("Output format [%s] not yet implemented.\n\n", outputFormat));
 		    	break;
 		    	
 		    case "TEMPLATE":
-		    	logger.info(String.format("Output format: [%s]\n\n", outputFormat));
+		    	logger.info(String.format("Output format: [%s]\n", outputFormat));
 			    if (null == templateFilename) {
 			    	System.out.println("ERROR: Missing template-file definition!\n");
 					callForHelp();
 				}
 				
-			    OutputFormat output = new OutputTemplate(outputFilename, templateFilename, templateHeader, templateFooter);
-		    	OutputMonitor monitor = new OutputMonitor(output, 20);
+			    output = new OutputTemplate(outputFilename, templateFilename, templateHeader, templateFooter);
+		    	monitor = new OutputMonitor(output, 5);
 		    	parseCSV(output);
 		    	monitor.cancel();
 			    break;

@@ -35,7 +35,7 @@ public class OutputMonitor {
 	 
 	 private void setTimer(OutputFormat output, int seconds) {
 		timer = new Timer();
-	    timer.schedule(new PrintJobStatusTask(), 5 * 1000, seconds * 1000);
+	    timer.schedule(new PrintJobStatusTask(), 100, seconds * 1000);
 	    this.output = output;
 	    startTime = new Date();
 	}

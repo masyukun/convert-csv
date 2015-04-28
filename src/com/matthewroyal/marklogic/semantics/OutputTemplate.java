@@ -12,7 +12,7 @@ import org.apache.logging.log4j.Logger;
 
 public class OutputTemplate extends OutputFormat {
 
-	private static final Logger logger = LogManager.getLogger(Class.class.getName()); 	
+	private static final Logger logger = LogManager.getLogger(OutputTemplate.class.getName()); 	
 
 	private String templateFilename;
 	private String templateHeader;
@@ -101,17 +101,12 @@ public class OutputTemplate extends OutputFormat {
 
 			// Parse each value in header
 			for (String h : header.keySet()) {
-				logger.debug(String.format("  Reading column [%s]: %s\n", h, record.get(h)));
 				rowFile = rowFile.replaceAll("\\{"+h+"\\}", record.get(h));
 			}
 
-			logger.debug(rowFile);
 			write(rowFile);
-			
 			++numLines;
 	    }
-//		bw.close();
-			
 
 		return numLines;
 	}
