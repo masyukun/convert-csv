@@ -48,7 +48,9 @@ public class ConvertCSV {
 	private static String namespacePrefix = null;
 	private static String rootElementName = null;
 	private static String recordElementName = null;	
-
+	private static Boolean generateSemTriples = false; 
+	
+	
 	
 	/**
 	 * Display the command-line help menu, then quit.
@@ -156,6 +158,9 @@ public class ConvertCSV {
 		options.addOption( OptionBuilder.withLongOpt( "xml-record" )
                 .withDescription( "Element name for each output CSV record." )
                 .hasArg().withArgName("ELEMENTNAME").create() );
+		options.addOption( OptionBuilder.withLongOpt( "generate-triples" )
+                .withDescription( "Should the code attempt to generate MarkLogic sem:triple nodes inside the resulting output document? (True/false)" )
+                .hasArg().withArgName("BOOLEAN").create() );
 		
 	}
 	
@@ -194,6 +199,8 @@ public class ConvertCSV {
 		    if (cmd.hasOption( "xml-namespace-prefix" )) { namespacePrefix= cmd.getOptionValue( "xml-namespace-prefix" ); }
 		    if (cmd.hasOption( "xml-root" ))             { rootElementName = cmd.getOptionValue( "xml-root" ); }
 		    if (cmd.hasOption( "xml-record" ))           { recordElementName = cmd.getOptionValue( "xml-record" ); }
+		    if (cmd.hasOption( "generate-triples" ))     { generateSemTriples = Boolean.parseBoolean(cmd.getOptionValue( "generate-triples" )); }
+		    
 		    
 		} catch (ParseException e1) {
 			System.out.println("ERROR: Incoming arguments just aren't cutting the mustard!\n\n");
@@ -232,7 +239,9 @@ public class ConvertCSV {
 		    if (properties.containsKey( "xml-namespace-prefix" )) { namespacePrefix = properties.getProperty( "xml-namespace-prefix" ); }
 		    if (properties.containsKey( "xml-root" ))             { rootElementName = properties.getProperty( "xml-root" ); }
 		    if (properties.containsKey( "xml-record" ))           { recordElementName = properties.getProperty( "xml-record" ); }
+		    if (properties.containsKey( "generate-triples" ))     { generateSemTriples = Boolean.parseBoolean(properties.getProperty( "generate-triples" )); }
 
+		    
 		    // Close properties file
 		    propertiesFI.close();
 			
@@ -294,7 +303,7 @@ public class ConvertCSV {
 		    case "XML":
 		    	logger.info(String.format("Output format [%s]\n", outputFormat));
 		    	
-		    	output = new OutputXML(outputFilename, namespace, namespacePrefix, rootElementName, recordElementName);
+		    	output = new OutputXML(outputFilename, namespace, namespacePrefix, rootElementName, recordElementName, generateSemTriples);
 		    	monitor = new OutputMonitor(output, 5);
 		    	parseCSV(output);
 		    	monitor.cancel();
