@@ -160,8 +160,8 @@ public class ConvertCSV {
                 .hasArg().withArgName("ELEMENTNAME").create() );
 		options.addOption( OptionBuilder.withLongOpt( "generate-triples" )
                 .withDescription( "Should the code attempt to generate MarkLogic sem:triple nodes inside the resulting output document? (True/false)" )
-                .hasArg().withArgName("BOOLEAN").create() );
-		
+                .hasArg().withArgName("BOOLEAN").create() );		
+
 	}
 	
 	
@@ -215,6 +215,12 @@ public class ConvertCSV {
 	 * Load properties from the specified properties file
 	 */
 	public static void loadProperties(String propsFilename) {
+		
+		// Sanity check
+		if (null == propsFilename || propsFilename.trim().length() <= 0) 
+			return;
+
+		
 		// Load properties file
 		File propFile = new File(propsFilename);
 		Properties properties = new Properties();
@@ -269,7 +275,8 @@ public class ConvertCSV {
     	
 		// Properties file overrides command-line options
 		buildCLIOptions();
-		loadProperties( loadCLIOptions(args) );
+		if (null != args) 
+			loadProperties( loadCLIOptions(args) );
 		
 		
 		// Handle different output types
