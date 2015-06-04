@@ -17,22 +17,25 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 
+
 public abstract class OutputFormat {
 
 	private static final Logger logger = LogManager.getLogger(OutputFormat.class.getName()); 	
 
 	private static final Integer MAX_NAME_ATTEMPTS = 100;
 	private static final String DEFAULT_OUTPUT_FILENAME = "outputFile.1.out";
+	private static final Integer DEFAULT_MAX_RECORDS_PER_FILE = 1000000;
 	
 	protected static int totalLinesInCsv = 0;
 	protected static Long totalProcessedRecordCount = 0L;
 	protected static Integer numRecordsInCurrentFile = 0;
 	
+	protected String outputPath = null;
 	protected String outputFilename = null;
 	protected File outputFile = null;
 	protected FileWriter fw = null;
 	protected BufferedWriter bw = null;
-	protected Integer maxRecordsPerFile = 1000000;
+	protected Integer maxRecordsPerFile = DEFAULT_MAX_RECORDS_PER_FILE;
 	
 	
 	OutputFormat() {
@@ -40,11 +43,12 @@ public abstract class OutputFormat {
 			outputFilename = DEFAULT_OUTPUT_FILENAME;
 	}
 		
-	OutputFormat(String outputFilename) {
-		if (null == outputFilename && null == this.outputFilename)
-			this.outputFilename = DEFAULT_OUTPUT_FILENAME;
-		else
-			this.outputFilename = outputFilename;
+	OutputFormat(String outputFilename, String outputPath, Integer maxRecordsPerFile) {
+
+		setOutputPath(outputPath, outputFilename);
+		
+		if (null != maxRecordsPerFile)
+			this.maxRecordsPerFile = maxRecordsPerFile;
 	}
 
 	
@@ -54,18 +58,48 @@ public abstract class OutputFormat {
 	public void setMaxRecordsPerFile(Integer maxRecordsPerFile) {
 		this.maxRecordsPerFile = maxRecordsPerFile;
 	}
-	
+
+	/**
+	 * Set the output path and filename of the current output file
+	 * @param outputPath String absolute filesystem path for the directory that the output file should be written to. 
+	 * @param outputFilename String filename of the output file.
+	 */
+	public void setOutputPath(String outputPath, String outputFilename) {
+
+		// Set the outputfilename
+		if (null == outputFilename && null == this.outputFilename)
+			this.outputFilename = DEFAULT_OUTPUT_FILENAME;
+		else
+			this.outputFilename = outputFilename;
+		
+
+		// Create the output directory hierarchy
+		if (null != outputPath && outputPath.length() > 0) {
+			this.outputPath = outputPath;
+			
+			try {
+				new File(outputPath).mkdirs();
+			} catch (SecurityException se) {
+				logger.error(String.format("ERROR: Couldn't create output path '%s' because of filesystem permissions.\n\n", outputPath));
+				ConvertCSV.callForHelp();
+					
+			} catch (NullPointerException npe) {
+				logger.error(String.format("ERROR: Couldn't create output path '%s' because that path is null.\n\n", outputPath));
+				ConvertCSV.callForHelp();
+			}
+		}
+
+	}
 	
 	/**
 	 * Quickly count the lines in a file.
 	 * @param filename String filename of the file to open and count
 	 * @return Integer number of lines in the file
 	 */
-	public int countLineNumber(String filename) {
+	public int countLineNumber(File filename) {
 		
 		try {
-			File file = new File(filename);
-			//BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+			File file = filename;
 			   
 			LineNumberReader lineNumberReader = new LineNumberReader(new FileReader(file));
 			lineNumberReader.skip(Long.MAX_VALUE);
@@ -224,12 +258,22 @@ public abstract class OutputFormat {
 	 */
 	public abstract Integer transformToFormat(CSVParser parser) throws IOException;
 	
+	public abstract String getFileExtension();
 	
 	protected abstract String customFileBeginning() throws IOException;
 	protected abstract String customFileEnding() throws IOException;
 	
 	
 	protected void beginNewFile() throws IOException {
+		// Append trailing slash to output path
+		if (!outputPath.endsWith("/"))
+			outputPath += "/";
+
+		// Combine output path and filename
+		if (!outputFilename.contains(outputPath))
+			outputFilename = outputPath + outputFilename;
+		
+		// Create the new output file
 		outputFilename = createOutputFile(outputFilename);
 		bw.write(this.customFileBeginning());
 	}
@@ -257,9 +301,10 @@ public abstract class OutputFormat {
 	
 	public void printJobStatus() {
 		if (null != maxRecordsPerFile && maxRecordsPerFile > 0 && totalLinesInCsv > 0)
-			System.out.printf("[%s] %.2f%% transforming CSV into %d output files: %s\n", 
+			System.out.printf("[%s] %.2f%% complete writing %d of %d files.\n   Converting CSV into output file '%s'\n", 
 				(new Date()).toString(),
 				(totalProcessedRecordCount/(double)totalLinesInCsv)*100,
+				(long)((totalProcessedRecordCount/(double)totalLinesInCsv)*Math.ceil(totalLinesInCsv/maxRecordsPerFile)),
 				(long)Math.ceil(totalLinesInCsv/maxRecordsPerFile),
 				outputFilename);
 		else

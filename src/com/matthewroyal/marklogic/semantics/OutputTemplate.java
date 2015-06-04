@@ -23,12 +23,12 @@ public class OutputTemplate extends OutputFormat {
 		super();
 	}
 
-	public OutputTemplate(String outputFilename) {
-		super(outputFilename);
+	public OutputTemplate(String outputFilename, String outputPath) {
+		super(outputFilename, outputPath, null);
 	}
 	
-	public OutputTemplate(String outputFilename, String templateFilename, String templateHeader, String templateFooter) {
-		super(outputFilename);
+	public OutputTemplate(String outputFilename, String outputPath, String templateFilename, String templateHeader, String templateFooter, Integer maxRecordsPerFile) {
+		super(outputFilename, outputPath, maxRecordsPerFile);
 		
 		this.templateFilename = templateFilename;
 		this.templateHeader = templateHeader;
@@ -77,6 +77,16 @@ public class OutputTemplate extends OutputFormat {
 	}
 	
 
+	@Override
+	public String getFileExtension() {
+		if (null != outputFilename && outputFilename.contains(".")) {
+			String[] pieces = outputFilename.split("\\.");
+			return pieces[pieces.length - 1];
+		}
+		
+		return ".out";
+	}
+	
 	@Override
 	public Integer transformToFormat(CSVParser parser) throws IOException {
 
