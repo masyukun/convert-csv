@@ -88,9 +88,9 @@ import com.matthewroyal.marklogic.CreateTableParser.CreateTableParser.Value_list
 import com.matthewroyal.marklogic.CreateTableParser.CreateTableParser.ZerofillContext;
 
 
-public class SqlListener implements CreateTableListener {
+public class MySQLListener implements CreateTableListener {
 
-	private static Logger logger = LogManager.getLogger( SqlListener.class.getClass() );
+	private static Logger logger = LogManager.getLogger( MySQLListener.class.getClass() );
 	
 	private class ForeignKey {
 		public String tableName;
@@ -103,11 +103,11 @@ public class SqlListener implements CreateTableListener {
 	
 	
 	// Track all the foreign keys as they're parsed, then link them in the schema at the end.
-	public HashMap<RDBColumn, ForeignKey> foreignKeyQueue = new HashMap<RDBColumn, SqlListener.ForeignKey>();
+	public HashMap<RDBColumn, ForeignKey> foreignKeyQueue = new HashMap<RDBColumn, MySQLListener.ForeignKey>();
 	
 	
 
-	public SqlListener() {
+	public MySQLListener() {
 		// Nothing to do here.
 	}
 
@@ -266,6 +266,7 @@ public class SqlListener implements CreateTableListener {
 	@Override public void enterForeign(ForeignContext ctx) {}
 	@Override public void exitForeign(ForeignContext ctx) {}
 	@Override public void exitDrop_statement(Drop_statementContext ctx) {}
+	@Override public void exitCreate_definition(Create_definitionContext ctx) {}
 	/*
 	 * END Unused parse event listeners
 	 * *****/
@@ -573,17 +574,11 @@ public class SqlListener implements CreateTableListener {
 				}
 			}
 			
-//			column_format
-//			storage
+//			TODO column_format, if desired.
+//			TODO storage, if desired.
 		}
 		
 
-	}
-
-	@Override
-	public void exitCreate_definition(Create_definitionContext ctx) {
-		
-		
 	}
 
 
