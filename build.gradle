@@ -5,10 +5,10 @@ apply plugin: 'eclipse'
 version = '2.0'
 jar {
     manifest {
-        attributes 'Implementation-Title': 'ConvertCSV',
+        attributes 'Implementation-Title': 'ConvertRDB',
                    'Implementation-Version': version,
                    'Main-Class': 'com.matthewroyal.marklogic.semantics.ConvertCSV',
-                   'Class-Path': 'lib/antlr-4.5-complete.jar lib/commons-cli-1.2.jar lib/commons-csv-1.1.jar lib/commons-lang3-3.4.jar lib/log4j-api-2.2.jar lib/log4j-core-2.2.jar'
+                   'Class-Path': 'lib/antlr-4.5-complete.jar lib/commons-cli-1.2.jar lib/commons-collections4-4.0.jar lib/commons-csv-1.1.jar lib/commons-lang3-3.4.jar lib/log4j-api-2.4.1.jar lib/log4j-core-2.4.1.jar'
     }
 }
 
@@ -23,10 +23,11 @@ dependencies {
     compile group: 'commons-collections', name: 'commons-collections', version: '3.2'
     compile name: 'antlr-4.5-complete'
     compile name: 'commons-cli-1.2'
+    compile name: 'commons-collections4-4.0'
     compile name: 'commons-csv-1.1'
     compile name: 'commons-lang3-3.4'
-    compile name: 'log4j-api-2.2'
-    compile name: 'log4j-core-2.2'
+    compile name: 'log4j-api-2.4.1'
+    compile name: 'log4j-core-2.4.1'
     testCompile group: 'junit', name: 'junit', version: '4.+'
 }
 
