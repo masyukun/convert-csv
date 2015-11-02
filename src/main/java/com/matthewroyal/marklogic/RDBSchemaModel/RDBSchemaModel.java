@@ -43,8 +43,12 @@ import com.matthewroyal.marklogic.CreateTableParser.CreateTableParser;
 import com.matthewroyal.marklogic.CreateTableParser.CreateTableParser.EvaluateContext;
 
 /**
- * @author mroyal
- *
+ * This package represents a model of a Relational Database. 
+ * It parses SQL schema information to populate the model.
+ * It outputs the model as different things, like a pretty text table or MarkLogic sem:triples.
+ *  
+ * @author Matthew Royal
+ * @see Golden Gate Bridge at least once before you die.
  */
 public class RDBSchemaModel {
 	
@@ -53,34 +57,39 @@ public class RDBSchemaModel {
 
 	// Useful data structures
 	public static enum OUTPUT_TYPES {PLAINTEXT, SEMTRIPLES, SQLINSERT};
-	public static List<RDBTable> tables = new ArrayList<RDBTable>();
-	private static Integer columnCounter = 0;
-	
+	public List<RDBTable> tables = new ArrayList<RDBTable>();
+	private Integer columnCounter = 0;
+	private CreateTableListener listener;	
 
 	// Map the table and column name to its unique URI
 	// "tablename/columname" --> "http://matthewroyal.com/ConvertRDB/dbname/tablename#columnumber"
-	private static HashMap<String, String> columnUriMap = new HashMap<String, String>();
+	private HashMap<String, String> columnUriMap = new HashMap<String, String>();
 	
 
 	// RDB namespaces
+	public static String NAMESPACE_ROOT = "http://matthewroyal.com/ConvertRDB/";
 	public static String SEM = "sem";
 	public static String SEM_TRIPLE_NAMESPACE = "http://marklogic.com/semantics";
-	public static String RDB = "http://matthewroyal.com/ConvertRDB/rdb#";
-	public static String DB = "http://matthewroyal.com/ConvertRDB/db#";
-	public static String TABLE;
-	public static String COLUMN;
-	public static String FK = "http://matthewroyal.com/ConvertRDB/foreignKey#";
+	public static String RDB = NAMESPACE_ROOT + "rdb#";
+	public static String DB = NAMESPACE_ROOT + "db#";
+	public static String FK = NAMESPACE_ROOT + "foreignKey#";
+	private String TABLE;
+	private String COLUMN;
 	
 
-	// Command-line options
-	private static Options options;
-	private static String sqlFilename;
-	private static OUTPUT_TYPES outputType;
-	private static String outputFilename = "myfile.txt"; // Default filename
-	private static String dbName;
+	// I/O options
+	private String sqlFilename;
+	private String schemaOutputFilename = "myfile.txt"; // Default filename
+	private String dbName;
 	
 	
 	public RDBSchemaModel() {}
+
+	public RDBSchemaModel(String sqlFilename, String schemaOutputFilename, String dbName) {
+		this.sqlFilename = sqlFilename;
+		this.schemaOutputFilename = schemaOutputFilename;
+		this.dbName = dbName;
+	}
 
 	
 	/**
@@ -88,7 +97,7 @@ public class RDBSchemaModel {
 	 * @param URI
 	 * @return
 	 */
-	private static String makeIRI(String newURI) {
+	private String makeIRI(String newURI) {
 		StringBuilder sb = new StringBuilder();
 	    URI uri;
 		try {
@@ -118,7 +127,7 @@ public class RDBSchemaModel {
 	 * @param columnNamespace
 	 * @return
 	 */
-	private static String getUniqueColumnURI(String key, String columnNamespace) {
+	private String getUniqueColumnURI(String key, String columnNamespace) {
 		
 		String uniqueURI;
 		
@@ -140,7 +149,7 @@ public class RDBSchemaModel {
 	 * @param object
 	 * @throws XMLStreamException
 	 */
-	private static void writeTriple(
+	private void writeTriple(
 			XMLStreamWriter xMLStreamWriter, 
 			String subject, String predicate, String object
 	) throws XMLStreamException {
@@ -168,10 +177,26 @@ public class RDBSchemaModel {
         xMLStreamWriter.writeEndElement();
 	}
 	
-	
-	@SuppressWarnings("unused")
-	public static String printSchema(Collection<RDBTable> tables, OUTPUT_TYPES format) {
+	/**
+	 * <p>Print the schema out.</p> 
+	 * <p>The model should already be built; otherwise this will output nothing.</p>
+	 * @param format The format you want the schema output as. (Required)
+	 * @param schemaOutputFilename Filename for the output schema file. (Optional)
+	 * @return
+	 */
+	public String printSchema(OUTPUT_TYPES format, String schemaOutputFilename) {
 
+		// Print the schema
+		logger.debug("Printing schema as " + format.toString());
+
+		
+		// Use the specified output filename, otherwise use the default
+		if (null != schemaOutputFilename) this.schemaOutputFilename = schemaOutputFilename;
+
+	    // Get the tables from the parse tree listener
+	    Collection<RDBTable> tables = ((MySQLListener)listener).tableMap.values();
+
+		
 		// Listify that collection
 		ArrayList<RDBTable> tableList = new ArrayList<RDBTable>(tables);
 		
@@ -224,27 +249,18 @@ public class RDBSchemaModel {
 			// Create the output file, if it doesn't exist
 			try {
 				// Try creating the output file
-				outputFile = new File(outputFilename);
+				outputFile = new File(this.schemaOutputFilename);
 				if (!outputFile.exists()) { 
 					outputFile.createNewFile();
 				}
 
-				// Fancy file-writing classes // TODO convert to stream?
-				if (null != fw) {
-					fw.close();
-					fw = null;
-				}
+				// Fancy file-writing classes
 				fw = new FileWriter(outputFile.getAbsoluteFile());
-				if (null != bw) {
-					bw.close();
-					bw = null;
-				}
 				bw = new BufferedWriter(fw);
-				
-				
-				// Start a shiny new XML file!
 				xMLStreamWriter = xMLOutputFactory.createXMLStreamWriter(bw);
-		        xMLStreamWriter.writeStartDocument();
+		        
+				// Start a shiny new XML file!
+				xMLStreamWriter.writeStartDocument();
 	        	xMLStreamWriter.setPrefix(SEM, SEM_TRIPLE_NAMESPACE);
 	        	xMLStreamWriter.writeCharacters("\n  ");
 		        xMLStreamWriter.writeStartElement(SEM, "triples", SEM_TRIPLE_NAMESPACE);
@@ -308,7 +324,7 @@ public class RDBSchemaModel {
 					
 					// Print the rest of the columns that aren't something special
 					for (RDBColumn column : table.getColumns() ) {
-						// TODO: Refactor these three chunks into one big loop instead
+						// TODO: Maybe Refactor these three chunks into one big loop instead
 						logger.debug(String.format("         : %s (%s)", column.name, column.type.name() ));
 
 						// Generate unique URI
@@ -337,13 +353,6 @@ public class RDBSchemaModel {
 		        xMLStreamWriter.close();
 	        	xMLStreamWriter = null;
 
-		        if (null != xMLStreamWriter) {
-					xMLStreamWriter.flush();
-		        	xMLStreamWriter.close();
-		        	xMLStreamWriter = null;
-		        }
-		    	
-
 				
 			} catch (XMLStreamException e) {
 				logger.error("ERROR: Creating new SEM TRIPLE XML output file. "
@@ -352,7 +361,7 @@ public class RDBSchemaModel {
 
 			} catch (NullPointerException npe) {
 				logger.error(
-					String.format("ERROR: Failed creating Output filename '%s'!\n\n", outputFilename),
+					String.format("ERROR: Failed creating Output filename '%s'!\n\n", this.schemaOutputFilename),
 					npe
 				);
 								
@@ -360,7 +369,7 @@ public class RDBSchemaModel {
 				logger.error(String.format("ERROR: The output file '%s' exists, but \n"
 					+ "  1) is a directory rather than a regular file, \n"
 					+ "  2) does not exist but cannot be created, or \n"
-					+ "  3) cannot be opened for some other reason", outputFilename), e);
+					+ "  3) cannot be opened for some other reason", this.schemaOutputFilename), e);
 			}
 		}
 
@@ -368,125 +377,78 @@ public class RDBSchemaModel {
 		else {
 			logger.error("Unsupported format type: " + ((null != format) ? format.toString() : "null"));
 		}
+		
 		return null;
-		
-	}
-	
-	
-	
-	
-	/**
-	 * Build the options accepted on the command line
-	 */
-	@SuppressWarnings("static-access")
-	private static void buildCLIOptions() {
-		// Define the command-line options
-		options = new Options();
-		options.addOption( OptionBuilder.withLongOpt( "sql-file" )
-                .withDescription( "Filename of SQL file to ingest." )
-                .hasArg().withArgName("SQLFILE").create() );
-		options.addOption( OptionBuilder.withLongOpt( "output-type" )
-                .withDescription( "Format of output schema: " + StringUtils.join(OUTPUT_TYPES.values(), ", ") )
-                .hasArg().withArgName("FORMAT").create() );
-		options.addOption( OptionBuilder.withLongOpt( "output-filename" )
-                .withDescription( String.format("Filename for output schema. (Default=[%s])", outputFilename) )
-                .hasArg().withArgName("OUTFILE").create() );
 	}
 	
 
 	/**
-	 * Load the options specified on the command line.
-	 * @param args String[] command line options from main(String[] args) function
-	 * @return String properties filename, if specified
+	 * Read in a file as a String. Use this only for relatively short files, 
+	 * since Java Strings, like diamonds, are forever.
+	 * 
+	 * @param path Path and filename of file to read in
+	 * @param encoding Whichever encoding you want to read the file using, e.g. Charset.defaultCharset()
+	 * @return String of your file's contents
+	 * @throws IOException Should something go horribly wrong.
 	 */
-	private static void loadCLIOptions(String[] args) {
-		
-		// Read in command-line options
-		CommandLine cmd;
-		CommandLineParser parser = new GnuParser();
-		try {
-			cmd = parser.parse( options, args);
-		
-		    if (cmd.hasOption( "sql-file" )) { sqlFilename = cmd.getOptionValue( "sql-file" ); }
-		    if (cmd.hasOption( "output-type" )) { outputType = OUTPUT_TYPES.valueOf(cmd.getOptionValue( "output-type" )); }
-		    if (cmd.hasOption( "output-filename" )) { outputFilename = cmd.getOptionValue( "output-filename" ); }
-		    
-		} catch (ParseException e1) {
-			System.out.println("ERROR: Incoming arguments just aren't cutting the mustard!\n\n");
-		}
-		
-	}
-
-	private static String readFile(String path, Charset encoding) 
+	private String readFile(String path, Charset encoding) 
 			  throws IOException 
 	{
 	  byte[] encoded = Files.readAllBytes(Paths.get(path));
 	  return new String(encoded, encoding);
 	}
 
-	private static void showHelp() {
-		
-		// generate the help statement
-		HelpFormatter formatter = new HelpFormatter();
-		formatter.printHelp( Class.class.getName(), options );
-		System.exit(0);
-	}
-	
-	
-	
-	
+
 
 	/**
-	 * @param args/
+	 * Parse the schema file and output according to user preferences
+	 * 
+	 * @param sqlFilename File name of the SQL schema file to parse.
+	 * @param dbName
+	 * @throws IllegalArgumentException A required argument was null or a stupid value was used.
+	 * @throws NoSuchFileException Specified sqlFilename does not exist.
+	 * @throws IOException Failed to read specified sqlFilename for some reason.
 	 */
-	public static void main(String[] args) {
+	public void parseSchema(
+			String sqlFilename,
+			String dbName
+	) throws IllegalArgumentException, NoSuchFileException, IOException {	
+	
+		// Use the incoming parameters
+		if (null != sqlFilename) this.sqlFilename = sqlFilename;
+		if (null != dbName) this.dbName = dbName;
 		
-		// Parse CLI options
-		buildCLIOptions();
-		if (null != args) 
-			loadCLIOptions(args);
-
-		if (null == sqlFilename || "".equals(sqlFilename)) {
-			logger.error("No SQL filename specified!");
-			
-			// generate the help statement
-			showHelp();
-		} else if (null == outputType) {
-			logger.error("No output-type specified!");
-			
-			// generate the help statement
-			showHelp();
-		}
-
+		
+		// Throw a tantrum if any of the required parameters weren't specified
+		if (null == this.sqlFilename) throw new IllegalArgumentException("Parameter sqlFilename MUST be specified!");
+		
 		
 		// Load SQL schema file
 		String sql = "";
 		try {
-			sql = readFile(sqlFilename, Charset.defaultCharset());
+			sql = readFile(this.sqlFilename, Charset.defaultCharset());
 		} catch (NoSuchFileException nsfe) {
-			logger.error(String.format("Specified SQL filename %s does not exist.", sqlFilename));
-
-			// generate the help statement
-			showHelp();
-			
+			logger.error(String.format("Specified SQL filename %s does not exist.", this.sqlFilename));
+			throw nsfe;
 		} catch (IOException e) {
-			logger.error(String.format("Failed to read incoming SQL filename %s", sqlFilename), e);
-
-			// generate the help statement
-			showHelp();
+			logger.error(String.format("Failed to read incoming SQL filename %s", this.sqlFilename), e);
+			throw e;
 		}
 
 		
-		// Assume that the database name is the incoming sqlfile minus extension 
-		StringBuilder dbNameBuilder = new StringBuilder();
-		String[] dbFilenamePieces = sqlFilename.split("/");
-		dbFilenamePieces = dbFilenamePieces[dbFilenamePieces.length - 1].split("\\.");
-		for (int ii = 0; ii < dbFilenamePieces.length - 1; ++ii)
-			dbNameBuilder.append(dbFilenamePieces[ii]);
-		dbName = dbNameBuilder.toString();
-		TABLE = String.format("http://matthewroyal.com/ConvertRDB/%s/table#", dbName);
-		COLUMN = String.format("http://matthewroyal.com/ConvertRDB/%s/column#", dbName);
-		
+		// If it's not specified, assume that the database name should be the incoming sqlfile minus extension 
+		if (null == dbName) {
+			StringBuilder dbNameBuilder = new StringBuilder();
+			String[] dbFilenamePieces = this.sqlFilename.split("/");
+			dbFilenamePieces = dbFilenamePieces[dbFilenamePieces.length - 1].split("\\.");
+			for (int ii = 0; ii < dbFilenamePieces.length - 1; ++ii)
+				dbNameBuilder.append(dbFilenamePieces[ii]);
+			dbName = dbNameBuilder.toString();
+		}
+
+		// Build the TABLE and COLUMN namespaces, which depend on the database name to keep namespaces clean
+		TABLE = String.format("%s%s/table#", NAMESPACE_ROOT, dbName);
+		COLUMN = String.format("%s%s/column#", NAMESPACE_ROOT, dbName);
 
 
 		// Get our lexer
@@ -503,12 +465,10 @@ public class RDBSchemaModel {
 	 
 	    // Attach the MySQL listener and walk the parse tree 
 	    ParseTreeWalker walker = new ParseTreeWalker();
-	    SqlListener listener = new SqlListener();
-	    walker.walk((CreateTableListener)listener, sqlContext);
+	    listener = new MySQLListener();
+	    walker.walk(listener, sqlContext);
 	    
-		// Print the schema
-	    logger.debug("Printing schema as " + outputType.toString());
-		RDBSchemaModel.printSchema(listener.tableMap.values(), outputType);
+	    logger.debug("Done mapping the parse tree of [%s] to the data model. ", this.sqlFilename);
 	}
 	
 }
