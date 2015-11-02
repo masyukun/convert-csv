@@ -23,6 +23,7 @@ tmp
 data
 out
 /bin/
+/build/
 /lib/
 /data-example/
 
