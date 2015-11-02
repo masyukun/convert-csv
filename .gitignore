@@ -22,6 +22,7 @@ target
 tmp
 data
 out
+/.gradle/
 /bin/
 /build/
 /lib/
