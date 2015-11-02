@@ -26,14 +26,6 @@ import javax.xml.stream.XMLStreamWriter;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.OptionBuilder;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -48,7 +40,7 @@ import com.matthewroyal.marklogic.CreateTableParser.CreateTableParser.EvaluateCo
  * It outputs the model as different things, like a pretty text table or MarkLogic sem:triples.
  *  
  * @author Matthew Royal
- * @see Golden Gate Bridge at least once before you die.
+ * @see Golden Gate Bridge, at least once.
  */
 public class RDBSchemaModel {
 	
@@ -67,9 +59,9 @@ public class RDBSchemaModel {
 	
 
 	// RDB namespaces
-	public static String NAMESPACE_ROOT = "http://matthewroyal.com/ConvertRDB/";
 	public static String SEM = "sem";
 	public static String SEM_TRIPLE_NAMESPACE = "http://marklogic.com/semantics";
+	public static String NAMESPACE_ROOT = "http://matthewroyal.com/ConvertRDB/";
 	public static String RDB = NAMESPACE_ROOT + "rdb#";
 	public static String DB = NAMESPACE_ROOT + "db#";
 	public static String FK = NAMESPACE_ROOT + "foreignKey#";
@@ -118,7 +110,7 @@ public class RDBSchemaModel {
 
 		return sb.toString();
 	}
-	
+
 	/**
 	 * Given a column key of the format "tablename/columnname", generate or retrieve a unique
 	 * URI for the column.
@@ -139,7 +131,7 @@ public class RDBSchemaModel {
 
 		return uniqueURI;
 	}
-	
+
 	/**
 	 * Write a triple to the incoming XMLStreamWriter
 	 * 
@@ -176,7 +168,7 @@ public class RDBSchemaModel {
         xMLStreamWriter.writeCharacters("\n    ");
         xMLStreamWriter.writeEndElement();
 	}
-	
+
 	/**
 	 * <p>Print the schema out.</p> 
 	 * <p>The model should already be built; otherwise this will output nothing.</p>
@@ -380,7 +372,6 @@ public class RDBSchemaModel {
 		
 		return null;
 	}
-	
 
 	/**
 	 * Read in a file as a String. Use this only for relatively short files, 
@@ -397,8 +388,6 @@ public class RDBSchemaModel {
 	  byte[] encoded = Files.readAllBytes(Paths.get(path));
 	  return new String(encoded, encoding);
 	}
-
-
 
 	/**
 	 * Parse the schema file and output according to user preferences
