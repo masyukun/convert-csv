@@ -27,6 +27,7 @@ out
 /build/
 /lib/
 /data-example/
+/output/
 
 # OS generated files #
 ######################
