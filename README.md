@@ -2,10 +2,12 @@
 Tool to convert CSV files into a number of destination formats, including XML, RDF, user-provided template, and MarkLogic sem:triple nodes.
 
 ##Required libraries:
- - Apache Commons CSV 1.1 https://commons.apache.org/proper/commons-csv/
- - Apache Commons CLI 1.2 https://commons.apache.org/proper/commons-cli/
- - Apache Commons Lang https://commons.apache.org/proper/commons-lang/
- - Apache Log4j 2.2 https://logging.apache.org/log4j/2.x/ 
+ - ANTLR 4.4+ Complete and Runtime http://www.antlr.org/download.html
+ - Apache Collections 4.0+ https://commons.apache.org/proper/commons-collections/
+ - Apache Commons CSV 1.1+ https://commons.apache.org/proper/commons-csv/
+ - Apache Commons CLI 1.2+ https://commons.apache.org/proper/commons-cli/
+ - Apache Commons Lang 3.4+ https://commons.apache.org/proper/commons-lang/
+ - Apache Log4j 2.4+ https://logging.apache.org/log4j/2.x/ 
 
 ##Parameters, command-line and properties file
 | Option        | Meaning |
