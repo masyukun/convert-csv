@@ -1,5 +1,5 @@
 # convert-csv
-Tool to convert CSV files into a number of destination formats, including XML, RDF, user-provided template, and MarkLogic sem:triple nodes.
+Tool to 1) convert relational schemas into MarkLogic sem:triples and 2) convert CSV files into a number of destination formats, including XML, RDF, user-provided template, and MarkLogic sem:triple nodes.
 
 ##Required libraries:
  - ANTLR 4.4+ Complete and Runtime http://www.antlr.org/download.html
