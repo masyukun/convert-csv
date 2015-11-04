@@ -8,9 +8,7 @@ Tool to convert CSV files into a number of destination formats, including XML, R
  - Apache Log4j 2.2 https://logging.apache.org/log4j/2.x/ 
 
 ##Parameters, command-line and properties file
-
-------------------------------
-|Option        | Meaning |
+| Option        | Meaning |
 |:----------|:--------------|
 | --csv-filename <CSVFILENAME>        |File name of the CSV file to read as input.
 | --csv-input-directory <CSVFILENAME> | The absolute path of a folder containing 1 or more CSV files for ingest. Overrides csv-filename!
