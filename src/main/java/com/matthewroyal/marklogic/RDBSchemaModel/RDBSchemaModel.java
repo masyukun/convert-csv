@@ -26,6 +26,7 @@ import javax.xml.stream.XMLStreamWriter;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -176,18 +177,40 @@ public class RDBSchemaModel {
 	 * @param schemaOutputFilename Filename for the output schema file. (Optional)
 	 * @return
 	 */
-	public String printSchema(OUTPUT_TYPES format, String schemaOutputFilename) {
+	public String printSchema(OUTPUT_TYPES format, String schemaOutputFilename, String dbName
+	) throws IllegalArgumentException {
 
-		// Print the schema
-		logger.debug("Printing schema as " + format.toString());
-
-		
 		// Use the specified output filename, otherwise use the default
 		if (null != schemaOutputFilename) this.schemaOutputFilename = schemaOutputFilename;
+		if (null != dbName) this.dbName = dbName;
+		if (null == format) {
+			throw new IllegalArgumentException(
+				String.format("--schema-output-type must specify a valid OUTPUT_TYPE! [%s]", StringUtils.join(OUTPUT_TYPES.values(), ", ")) 
+			);
+		}
 
+		
+		// Print the schema
+		logger.debug("Printing schema as " + format.toString());
+		
+
+		// If it's not specified, assume that the database name should be the sqlfile minus extension 
+		if (null == this.dbName) {
+			StringBuilder dbNameBuilder = new StringBuilder();
+			String[] dbFilenamePieces = this.sqlFilename.split("/");
+			dbFilenamePieces = dbFilenamePieces[dbFilenamePieces.length - 1].split("\\.");
+			for (int ii = 0; ii < dbFilenamePieces.length - 1; ++ii)
+				dbNameBuilder.append(dbFilenamePieces[ii]);
+			this.dbName = dbNameBuilder.toString();
+		}
+
+		// Build the TABLE and COLUMN namespaces, which depend on the database name to keep namespaces clean
+		TABLE = String.format("%s%s/table#", NAMESPACE_ROOT, this.dbName);
+		COLUMN = String.format("%s%s/column#", NAMESPACE_ROOT, this.dbName);
+
+		
 	    // Get the tables from the parse tree listener
 	    Collection<RDBTable> tables = ((MySQLListener)listener).tableMap.values();
-
 		
 		// Listify that collection
 		ArrayList<RDBTable> tableList = new ArrayList<RDBTable>(tables);
@@ -264,7 +287,7 @@ public class RDBSchemaModel {
 
 					// Relate database to table
 			        writeTriple(xMLStreamWriter, 
-		        		makeIRI(DB + dbName), 
+		        		makeIRI(DB + this.dbName), 
 		        		makeIRI(RDB + "hasTable"), 
 		        		makeIRI(TABLE + table.tableName));
 				
@@ -285,6 +308,7 @@ public class RDBSchemaModel {
 
 
 					// Print foreign keys
+logger.error(String.format("Table [%s] contains [%d] foreign keys", table.tableName, table.foreign_keys.keySet().size()));
 					for (RDBColumn fk : table.foreign_keys.keySet()) {
 						logger.debug(String.format("      FK : %s (%s)%s", 
 							fk.name, fk.type.name(),
@@ -399,14 +423,11 @@ public class RDBSchemaModel {
 	 * @throws IOException Failed to read specified sqlFilename for some reason.
 	 */
 	public void parseSchema(
-			String sqlFilename,
-			String dbName
+			String sqlFilename
 	) throws IllegalArgumentException, NoSuchFileException, IOException {	
 	
 		// Use the incoming parameters
 		if (null != sqlFilename) this.sqlFilename = sqlFilename;
-		if (null != dbName) this.dbName = dbName;
-		
 		
 		// Throw a tantrum if any of the required parameters weren't specified
 		if (null == this.sqlFilename) throw new IllegalArgumentException("Parameter sqlFilename MUST be specified!");
@@ -420,26 +441,11 @@ public class RDBSchemaModel {
 			logger.error(String.format("Specified SQL filename %s does not exist.", this.sqlFilename));
 			throw nsfe;
 		} catch (IOException e) {
-			logger.error(String.format("Failed to read incoming SQL filename %s", this.sqlFilename), e);
+			logger.error(String.format("Failed to read incoming SQL filename %s", this.sqlFilename));
 			throw e;
 		}
 
 		
-		// If it's not specified, assume that the database name should be the incoming sqlfile minus extension 
-		if (null == dbName) {
-			StringBuilder dbNameBuilder = new StringBuilder();
-			String[] dbFilenamePieces = this.sqlFilename.split("/");
-			dbFilenamePieces = dbFilenamePieces[dbFilenamePieces.length - 1].split("\\.");
-			for (int ii = 0; ii < dbFilenamePieces.length - 1; ++ii)
-				dbNameBuilder.append(dbFilenamePieces[ii]);
-			dbName = dbNameBuilder.toString();
-		}
-
-		// Build the TABLE and COLUMN namespaces, which depend on the database name to keep namespaces clean
-		TABLE = String.format("%s%s/table#", NAMESPACE_ROOT, dbName);
-		COLUMN = String.format("%s%s/column#", NAMESPACE_ROOT, dbName);
-
-
 		// Get our lexer
 	    CreateTableLexer lexer = new CreateTableLexer(new ANTLRInputStream(sql));
 	 

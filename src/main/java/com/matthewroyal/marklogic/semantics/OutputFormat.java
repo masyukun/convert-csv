@@ -304,8 +304,8 @@ public abstract class OutputFormat {
 			System.out.printf("[%s] %.2f%% complete writing %d of %d files.\n   Converting CSV into output file '%s'\n", 
 				(new Date()).toString(),
 				(totalProcessedRecordCount/(double)totalLinesInCsv)*100,
-				Math.ceil((long)((totalProcessedRecordCount/(double)totalLinesInCsv)*Math.ceil(totalLinesInCsv/maxRecordsPerFile))),
-				(long)Math.ceil(totalLinesInCsv/maxRecordsPerFile),
+				(int)Math.ceil((long)((totalProcessedRecordCount/(double)totalLinesInCsv)*Math.ceil(totalLinesInCsv/maxRecordsPerFile))),
+				(int)Math.ceil(totalLinesInCsv/maxRecordsPerFile),
 				outputFilename);
 		else
 			System.out.printf("[%s] 0.00%% Beginning transform of CSV into output files.\n", 

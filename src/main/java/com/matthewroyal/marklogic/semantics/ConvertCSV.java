@@ -17,13 +17,18 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import com.matthewroyal.marklogic.RDBSchemaModel.RDBSchemaModel;
+import com.matthewroyal.marklogic.RDBSchemaModel.RDBSchemaModel.OUTPUT_TYPES;
 
 
 
 public class ConvertCSV {
 
+	// Class error/debug logger
 	private static final Logger logger = LogManager.getLogger(ConvertCSV.class.getName()); 	
 	
 	private static Options options;
@@ -32,9 +37,9 @@ public class ConvertCSV {
 	private static final String DEFAULT_OUTPUT_FORMAT = "";
 	
 	// Output settings
-	private static String outputFormat = DEFAULT_OUTPUT_FORMAT;
+	private static String dataOutputFormat = DEFAULT_OUTPUT_FORMAT;
 	private static String outputPath = null;
-	private static String outputFilename = null;
+	private static String dataOutputFilename = null;
 	private static Boolean autogenerateOutputFilenames = false;
 	private static Integer maxRecordsPerFile = null;
 	
@@ -56,7 +61,11 @@ public class ConvertCSV {
 	private static String recordElementName = null;	
 	private static Boolean generateSemTriples = false; 
 
-	
+	// RDB settings
+	private static String sqlFilename;
+	private static OUTPUT_TYPES schemaOutputType;
+	private static String schemaOutputFilename = "myfile.txt"; // Default filename
+	private static String dbName;
 	
 	/**
 	 * Display the command-line help menu, then quit.
@@ -126,7 +135,7 @@ public class ConvertCSV {
 					}
 					
 					// Tell the output format class what the output filename should be
-					outputFilename = inputFilename;
+					dataOutputFilename = inputFilename;
 					output.setOutputPath(outputPath, inputFilename);
 				}
 
@@ -163,7 +172,7 @@ public class ConvertCSV {
 			logger.error(String.format("ERROR: The output file '%s' exists, but \n"
 					+ "  1) is a directory rather than a regular file, \n"
 					+ "  2) does not exist but cannot be created, or \n"
-					+ "  3) cannot be opened for some other reason\n\n", outputFilename), e);
+					+ "  3) cannot be opened for some other reason\n\n", dataOutputFilename), e);
 			callForHelp();
 			
 		} 
@@ -235,6 +244,23 @@ public class ConvertCSV {
                 .withDescription( "Should the code attempt to generate MarkLogic sem:triple nodes inside the resulting output document? (True/false)" )
                 .hasArg().withArgName("BOOLEAN").create() );		
 
+		// Schema ingestion options
+		options.addOption( OptionBuilder.withLongOpt( "sql-file" )
+                .withDescription( "Filename of MySQL SQL file containing CREATE TABLE statements to ingest." )
+                .hasArg().withArgName("SQLFILE").create() );
+//		options.addOption( OptionBuilder.withLongOpt( "sql-file-type" )
+//                .withDescription( "SQL Language to ingest: MYSQL, ORACLE, etc." )
+//                .hasArg().withArgName("SQLFILETYPE").create() );
+		options.addOption( OptionBuilder.withLongOpt( "schema-output-type" )
+                .withDescription( "Format of output schema: " + StringUtils.join(OUTPUT_TYPES.values(), ", ") )
+                .hasArg().withArgName("FORMAT").create() );
+		options.addOption( OptionBuilder.withLongOpt( "schema-output-filename" )
+                .withDescription( String.format("Filename for output schema. (Default=[%s])", schemaOutputFilename) )
+                .hasArg().withArgName("OUTFILE").create() );
+		options.addOption( OptionBuilder.withLongOpt( "database-name" )
+                .withDescription( "Name of database for output schema. (Default=[sql-file])" )
+                .hasArg().withArgName("DBNAME").create() );
+
 	}
 	
 	
@@ -266,9 +292,9 @@ public class ConvertCSV {
 		    if (cmd.hasOption( "template-header" )) { templateHeader = cmd.getOptionValue( "template-header" ); }
 		    if (cmd.hasOption( "template-footer" )) { templateFooter = cmd.getOptionValue( "template-footer" ); }
 
-		    if (cmd.hasOption( "output-format" ))        { outputFormat = cmd.getOptionValue( "output-format" ); }
+		    if (cmd.hasOption( "output-format" ))        { dataOutputFormat = cmd.getOptionValue( "output-format" ); }
 		    if (cmd.hasOption( "output-path" ))          { outputPath = cmd.getOptionValue( "output-path" ); }
-		    if (cmd.hasOption( "output-filename" ))      { outputFilename = cmd.getOptionValue( "output-filename" ); }
+		    if (cmd.hasOption( "output-filename" ))      { dataOutputFilename = cmd.getOptionValue( "output-filename" ); }
 		    if (cmd.hasOption( "output-filename-auto" )) { autogenerateOutputFilenames = Boolean.parseBoolean(cmd.getOptionValue( "output-filename-auto" )); }
 		    if (cmd.hasOption( "output-record-num" ))    { maxRecordsPerFile = Integer.parseInt(cmd.getOptionValue( "output-record-num" )); }
 			
@@ -277,10 +303,16 @@ public class ConvertCSV {
 		    if (cmd.hasOption( "xml-root" ))             { rootElementName = cmd.getOptionValue( "xml-root" ); }
 		    if (cmd.hasOption( "xml-record" ))           { recordElementName = cmd.getOptionValue( "xml-record" ); }
 		    if (cmd.hasOption( "generate-triples" ))     { generateSemTriples = Boolean.parseBoolean(cmd.getOptionValue( "generate-triples" )); }
+
+		    // Schema ingestion options // TODO get rid of static access to these values
+		    if (cmd.hasOption( "sql-file" )) { sqlFilename = cmd.getOptionValue( "sql-file" ); }
+		    if (cmd.hasOption( "schema-output-type" )) { schemaOutputType = OUTPUT_TYPES.valueOf(cmd.getOptionValue( "schema-output-type" )); }
+		    if (cmd.hasOption( "schema-output-filename" )) { schemaOutputFilename = cmd.getOptionValue( "schema-output-filename" ); }
+		    if (cmd.hasOption( "database-name" )) { dbName = cmd.getOptionValue("database-name"); }
 		    
 		    
 		} catch (ParseException e1) {
-			System.out.println("ERROR: Incoming arguments just aren't cutting the mustard!\n\n");
+			logger.error("ERROR: Incoming arguments just aren't cutting the mustard!\n\n", e1);
 			callForHelp();
 		}
 		
@@ -316,9 +348,9 @@ public class ConvertCSV {
 		    if (properties.containsKey( "template-header" )) { templateHeader = properties.getProperty( "template-header" ); }
 		    if (properties.containsKey( "template-footer" )) { templateFooter = properties.getProperty( "template-footer" ); }
 		    
-		    if (properties.containsKey( "output-format" ))        { outputFormat = properties.getProperty( "output-format" ); }
+		    if (properties.containsKey( "output-format" ))   { dataOutputFormat = properties.getProperty( "output-format" ); }
 		    if (properties.containsKey( "output-path" ))          { outputPath = properties.getProperty( "output-path" ); }
-		    if (properties.containsKey( "output-filename" ))      { outputFilename = properties.getProperty( "output-filename" ); }
+		    if (properties.containsKey( "output-filename" ))      { dataOutputFilename = properties.getProperty( "output-filename" ); }
 		    if (properties.containsKey( "output-filename-auto" )) { autogenerateOutputFilenames = Boolean.parseBoolean(properties.getProperty( "output-filename-auto" )); }
 		    if (properties.containsKey( "output-record-num" ))    { maxRecordsPerFile = Integer.parseInt(properties.getProperty( "output-record-num" )); }
 
@@ -328,18 +360,25 @@ public class ConvertCSV {
 		    if (properties.containsKey( "xml-record" ))           { recordElementName = properties.getProperty( "xml-record" ); }
 		    if (properties.containsKey( "generate-triples" ))     { generateSemTriples = Boolean.parseBoolean(properties.getProperty( "generate-triples" )); }
 
-		    
+			// Schema ingestion options 
+		    if (properties.containsKey( "sql-file" ))               { sqlFilename = properties.getProperty( "sql-file" ); }
+//		    if (properties.containsKey( "sql-filetype" ))           { sqlFiletype = properties.getProperty( "sql-filetype" ); }
+		    if (properties.containsKey( "schema-output-type" ))     { schemaOutputType = OUTPUT_TYPES.valueOf(properties.getProperty( "schema-output-type" )); }
+		    if (properties.containsKey( "schema-output-filename" )) { schemaOutputFilename = properties.getProperty( "schema-output-filename" ); }
+		    if (properties.containsKey( "database-name" ))          { dbName = properties.getProperty( "database-name" ); }
+
+		    		    
 		    // Close properties file
 		    propertiesFI.close();
 			
 		} catch (SecurityException se) {
-			System.out.printf("ERROR: Security restrictions are denying read access to the properties file '%s'.", propsFilename);
+			logger.error(String.format("ERROR: Security restrictions are denying read access to the properties file '%s'.", propsFilename));
 		} catch (NullPointerException npe) {
-			System.out.printf("WARNING: That properties file '%s' doesn't exist!\n\n", propsFilename);
+			logger.error(String.format("WARNING: That properties file '%s' doesn't exist!\n\n", propsFilename));
 		} catch (FileNotFoundException fnf) {
-			System.out.printf("WARNING: That properties file '%s' doesn't exist!\n\n", propsFilename);
+			logger.error(String.format("WARNING: That properties file '%s' doesn't exist!\n\n", propsFilename));
 		} catch (IllegalArgumentException iae) {
-			System.out.printf("ERROR: Sweet biscuits of mercy! The properties file '%s' contains a malformed Unicode escape sequence!\n\n", propsFilename);
+			logger.error(String.format("ERROR: Sweet biscuits of mercy! The properties file '%s' contains a malformed Unicode escape sequence!\n\n", propsFilename));
 			System.exit(0);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -358,47 +397,69 @@ public class ConvertCSV {
 		buildCLIOptions();
 		if (null != args) 
 			loadProperties( loadCLIOptions(args) );
+
 		
+		// Ingest the schema
+		RDBSchemaModel model = new RDBSchemaModel(sqlFilename, schemaOutputFilename, dbName);
+		if (null != sqlFilename) {
+			try {
+				// Parse the schema
+				model.parseSchema(sqlFilename);
+				
+				// Output the schema
+				model.printSchema(
+					schemaOutputType, 
+					((outputPath.substring(outputPath.length() - 1) == "/") ? outputPath : outputPath + "/") + schemaOutputFilename, 
+					dbName);
+		
+				logger.info(String.format("Finished exporting schema as %s to %s.", schemaOutputType.toString(), schemaOutputFilename));
+			} catch (IllegalArgumentException | IOException e) {
+				logger.error(String.format("Failed to parse SQL file [%s] for some reason.", sqlFilename), e);
+				callForHelp();
+			}
+		}
 		
 		// Handle different output types
-	    switch(outputFormat) {
+	    switch(dataOutputFormat) {
 
 		    case "JSON":
-		    	logger.info(String.format("Output format [%s] not yet implemented.\n\n", outputFormat));
+		    	logger.info(String.format("Output format [%s] not yet implemented. Please use TEMPLATE for this instead.\n\n", dataOutputFormat));
 		    	break;
 		    	
 		    case "SEMTRIPLE":
-		    	logger.info(String.format("Output format [%s]\n", outputFormat));
-		    	output = new OutputSemTriple(outputFilename, outputPath, namespace, maxRecordsPerFile);
+		    	logger.info(String.format("Output format [%s]\n", dataOutputFormat));
+		    	output = new OutputSemTriple(dataOutputFilename, outputPath, namespace, maxRecordsPerFile);
 		    	monitor = new OutputMonitor(output, 5);
 		    	parseCSV(output);
 		    	monitor.cancel();
 		    	break;
 		    	
 		    case "TEMPLATE":
-		    	logger.info(String.format("Output format: [%s]\n", outputFormat));
+		    	logger.info(String.format("Output format: [%s]\n", dataOutputFormat));
 			    if (null == templateFilename) {
-			    	System.out.println("ERROR: Missing template-file definition!\n");
+			    	logger.error("ERROR: Missing template-file definition!\n");
 					callForHelp();
 				}
 				
-			    output = new OutputTemplate(outputFilename, outputPath, templateFilename, templateHeader, templateFooter, maxRecordsPerFile);
+			    output = new OutputTemplate(dataOutputFilename, outputPath, templateFilename, templateHeader, templateFooter, maxRecordsPerFile);
 		    	monitor = new OutputMonitor(output, 5);
 		    	parseCSV(output);
 		    	monitor.cancel();
 			    break;
 		    	
 		    case "XML":
-		    	logger.info(String.format("Output format [%s]\n", outputFormat));
+		    	logger.info(String.format("Output format [%s]\n", dataOutputFormat));
 		    	
-		    	output = new OutputXML(outputFilename, outputPath, namespace, namespacePrefix, rootElementName, recordElementName, generateSemTriples, maxRecordsPerFile);
+		    	output = new OutputXML(dataOutputFilename, outputPath, namespace, namespacePrefix, rootElementName, recordElementName, generateSemTriples, maxRecordsPerFile);
 		    	monitor = new OutputMonitor(output, 5);
 		    	parseCSV(output);
 		    	monitor.cancel();
 		    	break;
 	    	
 	    	default:
-	    		callForHelp();
+	    		// They clearly didn't invoke the software correctly.
+	    		if (null == sqlFilename)
+	    			callForHelp();
 	    		break;
 	    }
 	}
