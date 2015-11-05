@@ -276,10 +276,11 @@ public class RDBSchemaModel {
 		        
 				// Start a shiny new XML file!
 				xMLStreamWriter.writeStartDocument();
-	        	xMLStreamWriter.setPrefix(SEM, SEM_TRIPLE_NAMESPACE);
 	        	xMLStreamWriter.writeCharacters("\n  ");
 		        xMLStreamWriter.writeStartElement(SEM, "triples", SEM_TRIPLE_NAMESPACE);
-				
+	        	xMLStreamWriter.setPrefix(SEM, SEM_TRIPLE_NAMESPACE);
+	        	xMLStreamWriter.writeNamespace(SEM, SEM_TRIPLE_NAMESPACE);
+
 		        
 		        // Print tables
 				for (RDBTable table : tables) {

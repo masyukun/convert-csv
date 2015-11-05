@@ -75,8 +75,8 @@ public class OutputXML extends OutputFormat {
 	        xMLStreamWriter.writeStartDocument();
 	        xMLStreamWriter.writeCharacters("\n");
 	        xMLStreamWriter.writeStartElement(rootName);
-	        xMLStreamWriter.writeDefaultNamespace(namespace);
 	        xMLStreamWriter.setPrefix(ns, namespace);
+	        xMLStreamWriter.writeDefaultNamespace(namespace);
 	        if (generateSemTriples) { 
 	        	xMLStreamWriter.setPrefix(SEM, SEM_TRIPLE_NAMESPACE);
 	        	xMLStreamWriter.writeNamespace(SEM, SEM_TRIPLE_NAMESPACE);

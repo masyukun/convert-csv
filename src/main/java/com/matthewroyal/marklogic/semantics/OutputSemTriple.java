@@ -61,9 +61,10 @@ public class OutputSemTriple extends OutputFormat {
     	// Start a shiny new XML file!
     	try {
 			xMLStreamWriter = xMLOutputFactory.createXMLStreamWriter(bw);
+			xMLStreamWriter.setPrefix(SEM, SEM_TRIPLE_NAMESPACE);
 	        xMLStreamWriter.writeStartDocument();
-        	xMLStreamWriter.setPrefix(SEM, SEM_TRIPLE_NAMESPACE);
-        	xMLStreamWriter.writeCharacters("\n  ");
+        	xMLStreamWriter.writeNamespace(SEM, SEM_TRIPLE_NAMESPACE);
+	        xMLStreamWriter.writeCharacters("\n  ");
 	        xMLStreamWriter.writeStartElement(SEM, "triples", SEM_TRIPLE_NAMESPACE);
 	        
 		} catch (XMLStreamException e) {
