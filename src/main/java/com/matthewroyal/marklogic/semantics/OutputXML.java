@@ -23,9 +23,6 @@ public class OutputXML extends OutputFormat {
 	private static final String DEFAULT_ROOT_ELEMENT_NAME = "csvFile";
 	private static final String DEFAULT_RECORD_ELEMENT_NAME = "csvRecord";
 
-	private static final String SEM = "sem";
-	private static final String SEM_TRIPLE_NAMESPACE = "http://marklogic.com/semantics";
-	
 	XMLOutputFactory xMLOutputFactory = XMLOutputFactory.newInstance();	
 	XMLStreamWriter xMLStreamWriter = null;    	
 
@@ -78,8 +75,8 @@ public class OutputXML extends OutputFormat {
 	        xMLStreamWriter.setPrefix(ns, namespace);
 	        xMLStreamWriter.writeDefaultNamespace(namespace);
 	        if (generateSemTriples) { 
-	        	xMLStreamWriter.setPrefix(SEM, SEM_TRIPLE_NAMESPACE);
-	        	xMLStreamWriter.writeNamespace(SEM, SEM_TRIPLE_NAMESPACE);
+	        	xMLStreamWriter.setPrefix(SemTriple.SEM, SemTriple.SEM_TRIPLE_NAMESPACE);
+	        	xMLStreamWriter.writeNamespace(SemTriple.SEM, SemTriple.SEM_TRIPLE_NAMESPACE);
 	        }
 	        
 		} catch (XMLStreamException e) {
@@ -88,7 +85,6 @@ public class OutputXML extends OutputFormat {
 
 		return "";
 	}
-
 	
 	@Override
 	protected String customFileEnding() throws IOException {
@@ -167,27 +163,11 @@ public class OutputXML extends OutputFormat {
 		        // write out sem:triples for each row
 		        if (generateSemTriples && !triples.isEmpty()) {
 		        	xMLStreamWriter.writeCharacters("\n  ");
-			        xMLStreamWriter.writeStartElement(SEM, "triples", SEM_TRIPLE_NAMESPACE);
+			        xMLStreamWriter.writeStartElement(SemTriple.SEM, "triples", SemTriple.SEM_TRIPLE_NAMESPACE);
+		        	xMLStreamWriter.writeNamespace(SemTriple.SEM, SemTriple.SEM_TRIPLE_NAMESPACE);
 			        
 		        	for (SemTriple triple : triples) {
-			        	xMLStreamWriter.writeCharacters("\n    ");
-				        xMLStreamWriter.writeStartElement(SEM, "triple", SEM_TRIPLE_NAMESPACE);
-				        
-				        xMLStreamWriter.writeCharacters("\n      ");
-				        xMLStreamWriter.writeStartElement(SEM, "subject", SEM_TRIPLE_NAMESPACE);
-				        xMLStreamWriter.writeCharacters(triple.subject);
-				        xMLStreamWriter.writeEndElement();
-				        xMLStreamWriter.writeCharacters("\n      ");
-				        xMLStreamWriter.writeStartElement(SEM, "predicate", SEM_TRIPLE_NAMESPACE);
-				        xMLStreamWriter.writeCharacters( triple.predicate );
-				        xMLStreamWriter.writeEndElement();
-				        xMLStreamWriter.writeCharacters("\n      ");
-				        xMLStreamWriter.writeStartElement(SEM, "object", SEM_TRIPLE_NAMESPACE);
-				        xMLStreamWriter.writeCharacters( triple.object );
-				        xMLStreamWriter.writeEndElement();
-				        
-				        xMLStreamWriter.writeCharacters("\n    ");
-				        xMLStreamWriter.writeEndElement();
+		        		SemTriple.writeTriple(xMLStreamWriter, triple, false);
 		        	}
 		        	
 		        	xMLStreamWriter.writeCharacters("\n  ");

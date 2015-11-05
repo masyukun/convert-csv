@@ -34,6 +34,7 @@ import com.matthewroyal.marklogic.CreateTableParser.CreateTableLexer;
 import com.matthewroyal.marklogic.CreateTableParser.CreateTableListener;
 import com.matthewroyal.marklogic.CreateTableParser.CreateTableParser;
 import com.matthewroyal.marklogic.CreateTableParser.CreateTableParser.EvaluateContext;
+import com.matthewroyal.marklogic.semantics.SemTriple;
 
 /**
  * This package represents a model of a Relational Database. 
@@ -60,8 +61,6 @@ public class RDBSchemaModel {
 	
 
 	// RDB namespaces
-	public static String SEM = "sem";
-	public static String SEM_TRIPLE_NAMESPACE = "http://marklogic.com/semantics";
 	public static String NAMESPACE_ROOT = "http://matthewroyal.com/ConvertRDB/";
 	public static String RDB = NAMESPACE_ROOT + "rdb#";
 	public static String DB = NAMESPACE_ROOT + "db#";
@@ -131,43 +130,6 @@ public class RDBSchemaModel {
 		} else { uniqueURI = columnUriMap.get(key); }
 
 		return uniqueURI;
-	}
-
-	/**
-	 * Write a triple to the incoming XMLStreamWriter
-	 * 
-	 * @param xMLStreamWriter
-	 * @param subject
-	 * @param predicate
-	 * @param object
-	 * @throws XMLStreamException
-	 */
-	private void writeTriple(
-			XMLStreamWriter xMLStreamWriter, 
-			String subject, String predicate, String object
-	) throws XMLStreamException {
-
-		// Opening sem:triple element
-		xMLStreamWriter.writeCharacters("\n    ");
-        xMLStreamWriter.writeStartElement(SEM, "triple", SEM_TRIPLE_NAMESPACE);
-        
-        // Body of subject, predicate, and object
-        xMLStreamWriter.writeCharacters("\n      ");
-        xMLStreamWriter.writeStartElement(SEM, "subject", SEM_TRIPLE_NAMESPACE);
-        xMLStreamWriter.writeCharacters( subject );
-        xMLStreamWriter.writeEndElement();
-        xMLStreamWriter.writeCharacters("\n      ");
-        xMLStreamWriter.writeStartElement(SEM, "predicate", SEM_TRIPLE_NAMESPACE);
-        xMLStreamWriter.writeCharacters( predicate );
-        xMLStreamWriter.writeEndElement();
-        xMLStreamWriter.writeCharacters("\n      ");
-        xMLStreamWriter.writeStartElement(SEM, "object", SEM_TRIPLE_NAMESPACE);
-        xMLStreamWriter.writeCharacters( object );
-        xMLStreamWriter.writeEndElement();
-
-        // Closing sem:triple element
-        xMLStreamWriter.writeCharacters("\n    ");
-        xMLStreamWriter.writeEndElement();
 	}
 
 	/**
@@ -277,9 +239,9 @@ public class RDBSchemaModel {
 				// Start a shiny new XML file!
 				xMLStreamWriter.writeStartDocument();
 	        	xMLStreamWriter.writeCharacters("\n  ");
-		        xMLStreamWriter.writeStartElement(SEM, "triples", SEM_TRIPLE_NAMESPACE);
-	        	xMLStreamWriter.setPrefix(SEM, SEM_TRIPLE_NAMESPACE);
-	        	xMLStreamWriter.writeNamespace(SEM, SEM_TRIPLE_NAMESPACE);
+		        xMLStreamWriter.writeStartElement(SemTriple.SEM, "triples", SemTriple.SEM_TRIPLE_NAMESPACE);
+	        	xMLStreamWriter.setPrefix(SemTriple.SEM, SemTriple.SEM_TRIPLE_NAMESPACE);
+	        	xMLStreamWriter.writeNamespace(SemTriple.SEM, SemTriple.SEM_TRIPLE_NAMESPACE);
 
 		        
 		        // Print tables
@@ -287,10 +249,11 @@ public class RDBSchemaModel {
 					logger.debug("\nTable: " + table.tableName);
 
 					// Relate database to table
-			        writeTriple(xMLStreamWriter, 
+					SemTriple.writeTriple(xMLStreamWriter, 
 		        		makeIRI(DB + this.dbName), 
 		        		makeIRI(RDB + "hasTable"), 
-		        		makeIRI(TABLE + table.tableName));
+		        		makeIRI(TABLE + table.tableName),
+		        		false);
 				
 					// Print primary keys
 					for (RDBColumn pk : table.primary_keys) {
@@ -301,10 +264,11 @@ public class RDBSchemaModel {
 						String uniqueURI = getUniqueColumnURI(key, COLUMN);
 						
 						// Relate table to PK column
-						writeTriple(xMLStreamWriter, 
+						SemTriple.writeTriple(xMLStreamWriter, 
 							makeIRI(TABLE + table.tableName), 
 							makeIRI(RDB + "hasPrimaryKey"), 
-							makeIRI(uniqueURI));
+							makeIRI(uniqueURI),
+							false);
 					}
 
 
@@ -327,16 +291,18 @@ public class RDBSchemaModel {
 						String uniqueRemoteURI = getUniqueColumnURI(remoteKey, COLUMN);
 						
 						// Relate table to FK 
-						writeTriple(xMLStreamWriter, 
+						SemTriple.writeTriple(xMLStreamWriter, 
 							makeIRI(TABLE + table.tableName), 
 							makeIRI(RDB + "hasForeignKey"), 
-							makeIRI(uniqueLocalURI));
+							makeIRI(uniqueLocalURI),
+							false);
 						
 						// Relate local key to remote key
-						writeTriple(xMLStreamWriter, 
+						SemTriple.writeTriple(xMLStreamWriter, 
 							makeIRI(uniqueLocalURI), 
 							makeIRI(RDB + "hasForeignKey"), 
-							makeIRI(uniqueRemoteURI));
+							makeIRI(uniqueRemoteURI),
+							false);
 					}
 					
 					// Print the rest of the columns that aren't something special
@@ -349,22 +315,25 @@ public class RDBSchemaModel {
 						String uniqueURI = getUniqueColumnURI(key, COLUMN);
 						
 						// Relate table to column
-						writeTriple(xMLStreamWriter, 
+						SemTriple.writeTriple(xMLStreamWriter, 
 							makeIRI(TABLE + table.tableName), 
 							makeIRI(RDB + "hasColumn"), 
-							makeIRI(uniqueURI));
+							makeIRI(uniqueURI),
+							false);
 						
 						// Store name of column
-						writeTriple(xMLStreamWriter, 
+						SemTriple.writeTriple(xMLStreamWriter, 
 							makeIRI(uniqueURI), 
 							makeIRI(RDB + "hasLabel"), 
-							column.name);
+							column.name,
+							false);
 					}
 				}
 			        
 				
 				// Finish off any remnant of the previous xml stream writer
 		        xMLStreamWriter.writeCharacters("\n");
+		        xMLStreamWriter.writeEndElement(); // triples
 		        xMLStreamWriter.writeEndDocument();
 		        xMLStreamWriter.flush();
 		        xMLStreamWriter.close();

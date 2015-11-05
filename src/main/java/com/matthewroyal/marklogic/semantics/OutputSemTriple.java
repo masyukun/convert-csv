@@ -20,9 +20,6 @@ public class OutputSemTriple extends OutputFormat {
 
 	private static final String DEFAULT_NAMESPACE_URI = "http://com.matthewroyal.marklogic.semantics/CSVConvert/OutputXML";
 
-	private static final String SEM = "sem";
-	private static final String SEM_TRIPLE_NAMESPACE = "http://marklogic.com/semantics";
-	
 	XMLOutputFactory xMLOutputFactory = XMLOutputFactory.newInstance();	
 	XMLStreamWriter xMLStreamWriter = null;    	
 
@@ -61,11 +58,11 @@ public class OutputSemTriple extends OutputFormat {
     	// Start a shiny new XML file!
     	try {
 			xMLStreamWriter = xMLOutputFactory.createXMLStreamWriter(bw);
-			xMLStreamWriter.setPrefix(SEM, SEM_TRIPLE_NAMESPACE);
 	        xMLStreamWriter.writeStartDocument();
-        	xMLStreamWriter.writeNamespace(SEM, SEM_TRIPLE_NAMESPACE);
 	        xMLStreamWriter.writeCharacters("\n  ");
-	        xMLStreamWriter.writeStartElement(SEM, "triples", SEM_TRIPLE_NAMESPACE);
+	        xMLStreamWriter.writeStartElement(SemTriple.SEM, "triples", SemTriple.SEM_TRIPLE_NAMESPACE);
+	        xMLStreamWriter.setPrefix(SemTriple.SEM, SemTriple.SEM_TRIPLE_NAMESPACE);
+	        xMLStreamWriter.writeNamespace(SemTriple.SEM, SemTriple.SEM_TRIPLE_NAMESPACE);
 	        
 		} catch (XMLStreamException e) {
 			logger.error("ERROR: Creating new SEM TRIPLE XML output file.", e);
@@ -80,9 +77,8 @@ public class OutputSemTriple extends OutputFormat {
 
 		// Finish document
 		try {
-//	        xMLStreamWriter.writeCharacters("\n");
-//	        xMLStreamWriter.writeEndElement();
 	        xMLStreamWriter.writeCharacters("\n");
+	        xMLStreamWriter.writeEndElement(); // triples
 	        xMLStreamWriter.writeEndDocument();
 	        xMLStreamWriter.flush();
 	        xMLStreamWriter.close();
@@ -100,7 +96,7 @@ public class OutputSemTriple extends OutputFormat {
 	public String getFileExtension() {
 		return ".xml";
 	}
-	
+
 	@Override
 	public Integer transformToFormat(CSVParser parser) throws IOException {
 
@@ -142,24 +138,7 @@ public class OutputSemTriple extends OutputFormat {
 		        if (!triples.isEmpty()) {
 			        
 		        	for (SemTriple triple : triples) {
-			        	xMLStreamWriter.writeCharacters("\n    ");
-				        xMLStreamWriter.writeStartElement(SEM, "triple", SEM_TRIPLE_NAMESPACE);
-				        
-				        xMLStreamWriter.writeCharacters("\n      ");
-				        xMLStreamWriter.writeStartElement(SEM, "subject", SEM_TRIPLE_NAMESPACE);
-				        xMLStreamWriter.writeCharacters( triple.subject );
-				        xMLStreamWriter.writeEndElement();
-				        xMLStreamWriter.writeCharacters("\n      ");
-				        xMLStreamWriter.writeStartElement(SEM, "predicate", SEM_TRIPLE_NAMESPACE);
-				        xMLStreamWriter.writeCharacters( triple.predicate );
-				        xMLStreamWriter.writeEndElement();
-				        xMLStreamWriter.writeCharacters("\n      ");
-				        xMLStreamWriter.writeStartElement(SEM, "object", SEM_TRIPLE_NAMESPACE);
-				        xMLStreamWriter.writeCharacters( triple.object );
-				        xMLStreamWriter.writeEndElement();
-				        
-				        xMLStreamWriter.writeCharacters("\n    ");
-				        xMLStreamWriter.writeEndElement();
+		        		SemTriple.writeTriple(xMLStreamWriter, triple, false);
 		        	}
 		        	
 			        triples.clear();
