@@ -146,7 +146,7 @@ public class OutputXML extends OutputFormat {
 			        if (null != record.get(h) && record.get(h).length() > 0) {
 			        	xMLStreamWriter.writeCharacters("\n    ");
 				        xMLStreamWriter.writeStartElement(h);			
-				        xMLStreamWriter.writeCharacters(record.get(h));
+				        xMLStreamWriter.writeCharacters(record.get(h).trim());
 				        xMLStreamWriter.writeEndElement();
 				        
 				        // write out sem:triples for each row
@@ -199,8 +199,11 @@ public class OutputXML extends OutputFormat {
 		    }
 	        
 		} catch (XMLStreamException xse) {
-			logger.error("ERROR: Unable to write XML file because it was not well-formed.");
+			logger.error("ERROR: Unable to write XML file because it was not well-formed.", xse);
 			
+		} catch (NullPointerException npe) {
+			logger.error("ERROR: Failure writing to XMLStreamWriter.", npe);
+			OutputMonitor.stopTimer();
 		}
         
 		endCurrentFile();

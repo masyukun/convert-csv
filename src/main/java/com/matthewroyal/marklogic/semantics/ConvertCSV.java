@@ -101,7 +101,7 @@ public class ConvertCSV {
 				// Open directory and list the CSV files inside
 				File dir = new File(csvInputDirectory);
 				
-				//Accept only files ending with case-insensitive ".csv"
+				// Accept only files ending with case-insensitive ".csv"
 				FilenameFilter csvFilter = new FilenameFilter() {
 					public boolean accept(File dir, String name) {
 						return name.trim().toLowerCase().endsWith(".csv");
@@ -151,6 +151,7 @@ public class ConvertCSV {
 								: null));
 				
 				// Transform!
+				output.numRecordsInCurrentFile = 0;
 				output.countLineNumber(csvFile);
 				output.transformToFormat(parser);
 				if (null != parser) {
@@ -431,7 +432,7 @@ public class ConvertCSV {
 		    	output = new OutputSemTriple(dataOutputFilename, outputPath, namespace, maxRecordsPerFile);
 		    	monitor = new OutputMonitor(output, 5);
 		    	parseCSV(output);
-		    	monitor.cancel();
+		    	monitor.cancelTimer();
 		    	break;
 		    	
 		    case "TEMPLATE":
@@ -444,7 +445,7 @@ public class ConvertCSV {
 			    output = new OutputTemplate(dataOutputFilename, outputPath, templateFilename, templateHeader, templateFooter, maxRecordsPerFile);
 		    	monitor = new OutputMonitor(output, 5);
 		    	parseCSV(output);
-		    	monitor.cancel();
+		    	monitor.cancelTimer();
 			    break;
 		    	
 		    case "XML":
@@ -453,7 +454,7 @@ public class ConvertCSV {
 		    	output = new OutputXML(dataOutputFilename, outputPath, namespace, namespacePrefix, rootElementName, recordElementName, generateSemTriples, maxRecordsPerFile);
 		    	monitor = new OutputMonitor(output, 5);
 		    	parseCSV(output);
-		    	monitor.cancel();
+		    	monitor.cancelTimer();
 		    	break;
 	    	
 	    	default:

@@ -11,6 +11,7 @@ public class OutputMonitor {
 	OutputFormat output;
 	  
 	private static final Integer DEFAULT_TIMER_LENGTH_S = 5;
+	private static Boolean STOP_TIMER = false;
 	
 	public OutputMonitor(OutputFormat output) {
 		setTimer(output, DEFAULT_TIMER_LENGTH_S);
@@ -20,18 +21,23 @@ public class OutputMonitor {
 		setTimer(output, seconds);
 	}
 
-	 public void cancel() {
-		 // Stop reminding
-		 timer.cancel();
+	public static void stopTimer() {
+		STOP_TIMER = true;
+	}
+	
+	
+	public void cancelTimer() {
+		// Stop reminding
+		timer.cancel();
 
-		 // Runtime estimate
-		 long millis = (new Date()).getTime() - startTime.getTime();
-		 long second = (millis / 1000) % 60;
-		 long minute = (millis / (1000 * 60)) % 60;
-		 long hour = (millis / (1000 * 60 * 60)) % 24;
-
-		 System.out.printf("Job completed in %02d:%02d:%02d.%d", hour, minute, second, millis);
-	 }
+		// Runtime estimate
+		long millis = (new Date()).getTime() - startTime.getTime();
+		long second = (millis / 1000) % 60;
+		long minute = (millis / (1000 * 60)) % 60;
+		long hour = (millis / (1000 * 60 * 60)) % 24;
+	
+		System.out.printf("Job completed in %02d:%02d:%02d.%d", hour, minute, second, millis);
+	}
 	 
 	 private void setTimer(OutputFormat output, int seconds) {
 		timer = new Timer();
@@ -42,7 +48,10 @@ public class OutputMonitor {
 	  
 	 class PrintJobStatusTask extends TimerTask {
 	   public void run() {
-	      output.printJobStatus();
+		  if (STOP_TIMER) 
+			  cancelTimer();
+		  else
+			  output.printJobStatus();
 	   }
 	 }
 
