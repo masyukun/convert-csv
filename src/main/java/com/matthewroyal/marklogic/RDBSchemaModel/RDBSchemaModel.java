@@ -308,7 +308,7 @@ public class RDBSchemaModel {
 
 
 					// Print foreign keys
-logger.error(String.format("Table [%s] contains [%d] foreign keys", table.tableName, table.foreign_keys.keySet().size()));
+					logger.debug(String.format("Table [%s] contains [%d] foreign keys", table.tableName, table.foreign_keys.keySet().size()));
 					for (RDBColumn fk : table.foreign_keys.keySet()) {
 						logger.debug(String.format("      FK : %s (%s)%s", 
 							fk.name, fk.type.name(),
