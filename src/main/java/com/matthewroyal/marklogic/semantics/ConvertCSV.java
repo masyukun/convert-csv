@@ -393,6 +393,8 @@ public class ConvertCSV {
 		OutputFormat output;
     	OutputMonitor monitor;
     	
+    	RDBSchemaModel model = null;
+    	
     	
 		// Properties file overrides command-line options
 		buildCLIOptions();
@@ -401,8 +403,10 @@ public class ConvertCSV {
 
 		
 		// Ingest the schema
-		RDBSchemaModel model = new RDBSchemaModel(sqlFilename, schemaOutputFilename, dbName);
 		if (null != sqlFilename) {
+			// Build the schema model
+			model = new RDBSchemaModel(sqlFilename, schemaOutputFilename, dbName);
+			
 			try {
 				// Parse the schema
 				model.parseSchema(sqlFilename);
@@ -451,7 +455,7 @@ public class ConvertCSV {
 		    case "XML":
 		    	logger.info(String.format("Output format [%s]\n", dataOutputFormat));
 		    	
-		    	output = new OutputXML(dataOutputFilename, outputPath, namespace, namespacePrefix, rootElementName, recordElementName, generateSemTriples, maxRecordsPerFile);
+	    		output = new OutputXML(dataOutputFilename, outputPath, namespace, namespacePrefix, rootElementName, recordElementName, generateSemTriples, maxRecordsPerFile, model);
 		    	monitor = new OutputMonitor(output, 5);
 		    	parseCSV(output);
 		    	monitor.cancelTimer();

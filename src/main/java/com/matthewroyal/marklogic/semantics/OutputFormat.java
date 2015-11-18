@@ -24,7 +24,7 @@ public abstract class OutputFormat {
 
 	private static final Integer MAX_NAME_ATTEMPTS = 100;
 	private static final String DEFAULT_OUTPUT_FILENAME = "outputFile.1.out";
-	private static final Integer DEFAULT_MAX_RECORDS_PER_FILE = 1000000;
+	private static final Integer DEFAULT_MAX_RECORDS_PER_FILE = 1000;
 	
 	protected static int totalLinesInCsv = 0;
 	protected static Long totalProcessedRecordCount = 0L;
@@ -32,6 +32,7 @@ public abstract class OutputFormat {
 	
 	protected String outputPath = null;
 	protected String outputFilename = null;
+	protected String tableName = null;
 	protected File outputFile = null;
 	protected FileWriter fw = null;
 	protected BufferedWriter bw = null;
@@ -275,6 +276,7 @@ public abstract class OutputFormat {
 		
 		// Create the new output file
 		outputFilename = createOutputFile(outputFilename);
+		tableName = null;
 		bw.write(this.customFileBeginning());
 	}
 	

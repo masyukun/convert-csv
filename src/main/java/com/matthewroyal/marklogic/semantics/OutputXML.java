@@ -13,6 +13,9 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.matthewroyal.marklogic.RDBSchemaModel.RDBColumn;
+import com.matthewroyal.marklogic.RDBSchemaModel.RDBSchemaModel;
+
 
 public class OutputXML extends OutputFormat {
 
@@ -26,13 +29,13 @@ public class OutputXML extends OutputFormat {
 	XMLOutputFactory xMLOutputFactory = XMLOutputFactory.newInstance();	
 	XMLStreamWriter xMLStreamWriter = null;    	
 
-	private String namespace = DEFAULT_NAMESPACE_URI;
+	private String namespace = null;
 	private String ns = DEFAULT_NAMESPACE_PREFIX;
 	private String rootName = DEFAULT_ROOT_ELEMENT_NAME;
 	private String recordName = DEFAULT_RECORD_ELEMENT_NAME;
 
 	private Boolean generateSemTriples = false; // Default value
-	
+	private RDBSchemaModel schema;
 	
 	
 	
@@ -50,6 +53,15 @@ public class OutputXML extends OutputFormat {
 		if (null != recordName) this.recordName = recordName;
 		if (null != generateSemTriples) this.generateSemTriples = generateSemTriples;
 	}
+	public OutputXML(String outputFilename, String outputPath, String namespace, String namespacePrefix, String rootElementName, String recordName, Boolean generateSemTriples, Integer maxRecordsPerFile, RDBSchemaModel schema) {
+		super(outputFilename, outputPath, maxRecordsPerFile);
+		if (null != namespace) this.namespace = namespace;
+		if (null != namespacePrefix) this.ns = namespacePrefix;
+		if (null != rootElementName) this.rootName = rootElementName;
+		if (null != recordName) this.recordName = recordName;
+		if (null != generateSemTriples) this.generateSemTriples = generateSemTriples;
+		if (null != schema) this.schema = schema;
+	}
 	
 	
 	@Override
@@ -65,7 +77,20 @@ public class OutputXML extends OutputFormat {
 		} catch (XMLStreamException e) {
 			logger.error("ERROR: Closing off XML output file.", e);
 		}
-    	
+
+		// Attempt to figure out the table name from the outputFilename
+		if (null == tableName) {
+			for (String tName : schema.tableMap.keySet()) {
+				if (outputFilename.replaceAll("/", "").replaceAll(" ", "").replaceAll("_", "").toUpperCase().contains( tName.replaceAll("_", "").replaceAll(" ", "").toUpperCase() )) {
+					if (null == tableName || tName.length() > tableName.length()) {
+						tableName = tName;
+						namespace = SemTriple.TABLEDATA_NAMESPACE(schema.dbName, tName);
+					}
+				}
+			}
+		}
+
+
     	// Start a shiny new XML file!
     	try {
 			xMLStreamWriter = xMLOutputFactory.createXMLStreamWriter(bw);
@@ -92,7 +117,7 @@ public class OutputXML extends OutputFormat {
 		// Finish document
 		try {
 	        xMLStreamWriter.writeCharacters("\n");
-	        xMLStreamWriter.writeEndElement();
+	        xMLStreamWriter.writeEndElement(); // root name
 	        xMLStreamWriter.writeCharacters("\n");
 	        xMLStreamWriter.writeEndDocument();
 	        xMLStreamWriter.flush();
@@ -127,55 +152,74 @@ public class OutputXML extends OutputFormat {
 	
 		        write(null); // Trigger writing logic
 		        xMLStreamWriter.writeCharacters("\n  ");
-		        xMLStreamWriter.writeStartElement(recordName);
-		        xMLStreamWriter.writeAttribute("number", numRecordsInCurrentFile.toString());
+		        xMLStreamWriter.writeStartElement(recordName); //rowname
+		        xMLStreamWriter.writeAttribute("number", totalProcessedRecordCount.toString());
 
 		        // Parse each value in header
-		        String key = null;
 				for (String h : header.keySet()) {
-					
-					if (generateSemTriples && null == key) {
-						// Grab the first header as key
-						key = h;
-					}
-					
 			        if (null != record.get(h) && record.get(h).length() > 0) {
 			        	xMLStreamWriter.writeCharacters("\n    ");
-				        xMLStreamWriter.writeStartElement(h);			
+				        xMLStreamWriter.writeStartElement(h); // column name
 				        xMLStreamWriter.writeCharacters(record.get(h).trim());
-				        xMLStreamWriter.writeEndElement();
-				        
-				        // write out sem:triples for each row
-				        if (generateSemTriples && key != h) {
-					        triples.add(new SemTriple(
-					        		record.get(key), 
-					        		namespace + "/" + h,
-					        		record.get(h)
-			        		));
-				        }
-				        
+				        xMLStreamWriter.writeEndElement(); // column name
 			        }
+				}
+				
+				// Use the schema to generate triples, if that's what was given.
+				if (generateSemTriples && null != schema) {
+
+					// Attempt to figure out the table name from the outputFilename
+					if (null == tableName) {
+						for (String tName : schema.tableMap.keySet()) {
+							if (outputFilename.replaceAll("/", "").replaceAll(" ", "").replaceAll("_", "").toUpperCase().contains( tName.replaceAll("_", "").replaceAll(" ", "").toUpperCase() )) {
+								if (null == tableName || tName.length() > tableName.length()) {
+									tableName = tName;
+									namespace = SemTriple.TABLEDATA_NAMESPACE(schema.dbName, tName);
+								}
+							}
+						}
+					}
+
+					// Build triples for each PK-FK pair
+					if (null == tableName)
+						logger.error("This table doesn't have a name!");
+					
+					for (RDBColumn pk : schema.tableMap.get(tableName).primary_keys) {
+						
+						// Generate identifying triple
+						SemTriple tableHasRow = new SemTriple();
+						tableHasRow.subject = SemTriple.TABLEDATA_NAMESPACE(schema.dbName, tableName) + "/" + record.get( header.get(pk.name.trim()) ).trim();
+						tableHasRow.predicate = SemTriple.RDB + "instanceOf";
+						tableHasRow.object = SemTriple.TABLE_NAMESPACE(schema.dbName, tableName);
+						triples.add(tableHasRow);
+						
+						// Generate relational constraint triple
+						for (RDBColumn fk : schema.tableMap.get(tableName).foreign_keys.keySet()) {
+							SemTriple rowHasRelationship = new SemTriple();
+							String fkName = fk.name.trim();
+							
+							rowHasRelationship.subject = SemTriple.TABLEDATA_NAMESPACE(schema.dbName, tableName) + "/" + record.get( header.get(pk.name.trim()) ).trim();
+							rowHasRelationship.predicate = SemTriple.FK + fkName;
+							RDBColumn remoteKey = schema.tableMap.get(tableName).foreign_keys.get(fk);
+							if (null == header.get(fkName))
+								logger.error(String.format("This FK [%s] doesn't map to a header!", fkName));
+							String fkValue = record.get( header.get(fkName) );
+							rowHasRelationship.object = SemTriple.TABLEDATA_NAMESPACE(schema.dbName, remoteKey.table.tableName) + "/" + fkValue.trim();
+							
+							if (null != fkValue && fkValue.trim().length() > 0)
+								triples.add(rowHasRelationship);
+						}
+					}
+
+					// Write the triples as a batch
+					if (null != triples && triples.size() > 0) {
+						SemTriple.writeTriple(xMLStreamWriter, triples, true);
+						triples.clear();
+					}
 				}
 	
 	        	xMLStreamWriter.writeCharacters("\n  ");
-		        xMLStreamWriter.writeEndElement();
-		        
-		        // write out sem:triples for each row
-		        if (generateSemTriples && !triples.isEmpty()) {
-		        	xMLStreamWriter.writeCharacters("\n  ");
-			        xMLStreamWriter.writeStartElement(SemTriple.SEM, "triples", SemTriple.SEM_TRIPLE_NAMESPACE);
-		        	xMLStreamWriter.writeNamespace(SemTriple.SEM, SemTriple.SEM_TRIPLE_NAMESPACE);
-			        
-		        	for (SemTriple triple : triples) {
-		        		SemTriple.writeTriple(xMLStreamWriter, triple, false);
-		        	}
-		        	
-		        	xMLStreamWriter.writeCharacters("\n  ");
-			        xMLStreamWriter.writeEndElement();
-		        	
-			        triples.clear();
-		        }
-
+		        xMLStreamWriter.writeEndElement(); //rowname
 		    }
 	        
 		} catch (XMLStreamException xse) {

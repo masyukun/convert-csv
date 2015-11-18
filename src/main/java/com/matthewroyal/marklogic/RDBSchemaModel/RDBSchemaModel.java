@@ -52,6 +52,7 @@ public class RDBSchemaModel {
 	// Useful data structures
 	public static enum OUTPUT_TYPES {PLAINTEXT, SEMTRIPLES, SQLINSERT};
 	public List<RDBTable> tables = new ArrayList<RDBTable>();
+	public HashMap<String, RDBTable> tableMap = new HashMap<String, RDBTable>();
 	private Integer columnCounter = 0;
 	private CreateTableListener listener;	
 
@@ -72,7 +73,7 @@ public class RDBSchemaModel {
 	// I/O options
 	private String sqlFilename;
 	private String schemaOutputFilename = "myfile.txt"; // Default filename
-	private String dbName;
+	public String dbName;
 	
 	
 	public RDBSchemaModel() {}
@@ -83,7 +84,7 @@ public class RDBSchemaModel {
 		this.dbName = dbName;
 	}
 
-	
+
 	/**
 	 * Create MarkLogic-style sem:IRI
 	 * @param URI
@@ -172,8 +173,9 @@ public class RDBSchemaModel {
 
 		
 	    // Get the tables from the parse tree listener
+		this.tableMap = new HashMap<String, RDBTable>( ((MySQLListener)listener).tableMap );
 	    Collection<RDBTable> tables = ((MySQLListener)listener).tableMap.values();
-		
+	    
 		// Listify that collection
 		ArrayList<RDBTable> tableList = new ArrayList<RDBTable>(tables);
 		

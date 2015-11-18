@@ -36,7 +36,7 @@ public class RDBColumn implements Comparable<RDBColumn> {
 					
 	}
 	
-	RDBTable table;
+	public RDBTable table;
 	
 	// Columns
 	public String name = "";
