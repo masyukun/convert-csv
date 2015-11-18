@@ -287,7 +287,7 @@ public class MySQLListener implements CreateTableListener {
 			}
 			
 			ForeignKey fk = foreignKeyQueue.get(localColumn);
-			RDBTable fkTable = tableMap.get(fk.tableName);
+			RDBTable fkTable = tableMap.get(fk.tableName.replaceAll(" ", ""));
 			if (null != fkTable) {
 				RDBColumn fkColumn = fkTable.getColumnByName(fk.columnName);
 				
@@ -334,7 +334,7 @@ public class MySQLListener implements CreateTableListener {
 
 		
 		// Get a reference to the current table
-		String tableName = ctx.tbl_name().getText().replaceAll("`", "");
+		String tableName = ctx.tbl_name().getText().replaceAll("`", "").replaceAll(" ", "");
 		RDBTable tableObject = tableMap.get(tableName);
 		
 		if (null == tableObject) {
