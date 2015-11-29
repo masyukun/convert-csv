@@ -116,7 +116,7 @@ public class ConvertCSV {
 			}
 			else {
 				// No directory specified, so let's use the filename specified instead
-				csvFilesToProcess = new File [] { new File (csvFilename) };
+				csvFilesToProcess = new File [] { new File (csvFilename.trim()) };
 			}
 			
 			
