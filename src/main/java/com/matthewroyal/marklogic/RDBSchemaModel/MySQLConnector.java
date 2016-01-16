@@ -28,14 +28,11 @@ public class MySQLConnector {
   public ArrayList<String> tables = new ArrayList<String>();
   
   // MySQL database connection stuff
-  private Connection connect = null;
-  private PreparedStatement preparedStatement = null;
-  private ResultSet resultSet = null;
   private String connectionString = null;
 
   
   // Get all the tables of the desired MySQL database 
-  private String selectSchema = 
+  private String selectMySqlSchema = 
     "SELECT 'mysql' dbms,t.TABLE_SCHEMA,t.TABLE_NAME "
     + " FROM INFORMATION_SCHEMA.TABLES t "
     + " WHERE t.TABLE_TYPE='BASE TABLE' "
@@ -69,7 +66,15 @@ public class MySQLConnector {
     // Sanity check
     if (null == databasename || databasename.trim().length() <= 0)
       throw new InvalidParameterException("databasename must have a value");
+    else
+      // Store for later use
+      this.databaseName = databasename;
   
+    // MySQL database connection stuff
+    Connection connect = null;
+    PreparedStatement preparedStatement = null;
+    ResultSet resultSet = null;
+
     // Load the MySQL driver
     try {
       Class.forName("com.mysql.jdbc.Driver");
@@ -92,7 +97,7 @@ public class MySQLConnector {
     
     // Populate the select schema SQL with the specified database name
     try {
-      preparedStatement = connect.prepareStatement(selectSchema);
+      preparedStatement = connect.prepareStatement(selectMySqlSchema);
       preparedStatement.setString(1, databasename);
       resultSet = preparedStatement.executeQuery();
     }
@@ -129,7 +134,7 @@ public class MySQLConnector {
       System.exit(1);
     }
 
-    close();
+    close(resultSet, preparedStatement, connect);
     logger.debug(createTableSqlString);
 
     return createTableSqlString;
@@ -138,7 +143,7 @@ public class MySQLConnector {
 
 
   // You need to close the resultSet
-  private void close() {
+  private void close(ResultSet resultSet, PreparedStatement preparedStatement, Connection connect) {
     try {
       if (resultSet != null) {
         resultSet.close();
