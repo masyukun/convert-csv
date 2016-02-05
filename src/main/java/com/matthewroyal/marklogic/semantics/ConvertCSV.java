@@ -66,7 +66,12 @@ public class ConvertCSV {
   private static String schemaOutputFilename = "myfile.txt"; // Default filename
   private static String dbName;
   private static String mysqlConnectionString;
+  private static String ingestDatabaseType = "MySQL";
+  private static String ingestDatabaseUser = "admin";
+  private static String ingestDatabasePassword = "admin";
 
+  // External 
+  
   /**
    * Display the command-line help menu, then quit.
    * 
@@ -267,6 +272,18 @@ public class ConvertCSV {
     options.addOption(OptionBuilder.withLongOpt("database-name")
         .withDescription("Name of database to ingest (over JDBC) and for output schema. (Default=[sql-file])")
         .hasArg().withArgName("DBNAME").create());
+        
+    // External database connectivity options
+    options.addOption(OptionBuilder.withLongOpt("ingest-database-type")
+        .withDescription("Type of database to ingest (MySQL). (Default=[MySQL])")
+        .hasArg().withArgName("DBTYPE").create());
+    options.addOption(OptionBuilder.withLongOpt("ingest-database-user")
+        .withDescription("User name to use when connecting to external database.")
+        .hasArg().withArgName("DBUSER").create());
+    options.addOption(OptionBuilder.withLongOpt("ingest-database-password")
+        .withDescription("Password to use when connecting to external database.")
+        .hasArg().withArgName("DBPASS").create());
+
   }
 
   /**
@@ -312,10 +329,15 @@ public class ConvertCSV {
 
       // Schema ingestion options // TODO get rid of static access to these values
       if (cmd.hasOption("sql-file")) { sqlFilename = cmd.getOptionValue("sql-file"); }
-      if (cmd.hasOption("mysql-connection-string")) { mysqlConnectionString = cmd.getOptionValue("mysql-connection-string"); }
       if (cmd.hasOption("schema-output-type")) { schemaOutputType = OUTPUT_TYPES.valueOf(cmd.getOptionValue("schema-output-type")); }
       if (cmd.hasOption("schema-output-filename")) { schemaOutputFilename = cmd.getOptionValue("schema-output-filename"); }
       if (cmd.hasOption("database-name")) { dbName = cmd.getOptionValue("database-name"); }
+
+      // External database connectivity options
+      if (cmd.hasOption("mysql-connection-string")) { mysqlConnectionString = cmd.getOptionValue("mysql-connection-string"); }
+      if (cmd.hasOption("ingest-database-type")) { ingestDatabaseType = cmd.getOptionValue("ingest-database-type"); }
+      if (cmd.hasOption("ingest-database-user")) { ingestDatabaseUser = cmd.getOptionValue("ingest-database-user"); }
+      if (cmd.hasOption("ingest-database-password")) { ingestDatabasePassword = cmd.getOptionValue("ingest-database-password"); }
 
       // Higher-level sanity checks
       if (null != dataOutputFilename && null == outputPath) { 
@@ -372,12 +394,17 @@ public class ConvertCSV {
 
       // Schema ingestion options
       if (properties.containsKey("sql-file")) { sqlFilename = properties.getProperty("sql-file"); }
-      if (properties.containsKey("mysql-connection-string")) { mysqlConnectionString = properties.getProperty("mysql-connection-string"); }
       // if (properties.containsKey( "sql-filetype" )) { sqlFiletype =
       // properties.getProperty( "sql-filetype" ); }
       if (properties.containsKey("schema-output-type")) { schemaOutputType = OUTPUT_TYPES.valueOf(properties.getProperty("schema-output-type")); }
       if (properties.containsKey("schema-output-filename")) { schemaOutputFilename = properties.getProperty("schema-output-filename"); }
       if (properties.containsKey("database-name")) { dbName = properties.getProperty("database-name"); }
+
+      // External database connectivity options
+      if (properties.containsKey("mysql-connection-string")) { mysqlConnectionString = properties.getProperty("mysql-connection-string"); }
+      if (properties.containsKey("ingest-database-type")) { ingestDatabaseType = properties.getProperty("ingest-database-type"); }
+      if (properties.containsKey("ingest-database-user")) { ingestDatabaseUser = properties.getProperty("ingest-database-user"); }
+      if (properties.containsKey("ingest-database-password")) { ingestDatabasePassword = properties.getProperty("ingest-database-pass"); }
 
       // Close properties file
       propertiesFI.close();
@@ -426,8 +453,25 @@ public class ConvertCSV {
     // Ingest the schema
     if (null != sqlFilename || null != mysqlConnectionString) {
       // Build the schema model
-      if (null != mysqlConnectionString)
+      if (null != mysqlConnectionString) {
         model = new RDBSchemaModel(schemaOutputFilename, dbName);
+        
+        // Add user parameter to connection string
+        if (!mysqlConnectionString.contains("user=") 
+            && ingestDatabaseUser != null && ingestDatabaseUser != "")
+          mysqlConnectionString +=
+            mysqlConnectionString 
+            + ((mysqlConnectionString.contains("?")) ? "&user=" : "?user=" )
+            + ingestDatabaseUser;
+        
+        // Add password parameter to connection string
+        if (!mysqlConnectionString.contains("password=") 
+            && ingestDatabasePassword != null && ingestDatabasePassword!= "")
+          mysqlConnectionString +=
+            mysqlConnectionString 
+            + ((mysqlConnectionString.contains("?")) ? "&password=" : "?password=" )
+            + ingestDatabasePassword;
+      }
       else
         model = new RDBSchemaModel(sqlFilename, schemaOutputFilename, dbName);
 
