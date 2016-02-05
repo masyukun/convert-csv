@@ -1,6 +1,8 @@
 package com.matthewroyal.marklogic.semantics;
 
 import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -236,4 +238,113 @@ public class OutputXML extends OutputFormat {
 	}
 
 
+	
+	
+	
+	
+	
+	
+	/**
+	 * Accept a database ResultSet rather than a parser object
+	 */
+	   public Integer transformToFormat(ResultSet results) throws IOException {
+
+	        ArrayList<SemTriple> triples = null;
+	        if (generateSemTriples) 
+	            triples = new ArrayList<SemTriple>();
+	        
+	        
+	        try {	          
+              // Loop through the whole database ResultSet
+              while (results.next()) {
+	    
+                write(null); // Trigger writing logic
+                xMLStreamWriter.writeCharacters("\n  ");
+                xMLStreamWriter.writeStartElement(recordName); //rowname
+                xMLStreamWriter.writeAttribute("number", totalProcessedRecordCount.toString());
+
+                
+                // Parse each value in header
+                int numColumns = results.getMetaData().getColumnCount();
+                for (Integer ii = 1; ii <= numColumns; ++ii) {
+                    String columnName = results.getMetaData().getColumnLabel(ii);
+                    Object columnData = results.getObject(ii);
+                    
+                    // Only print the element if the data isn't null
+                    if (null != columnData) {
+                      xMLStreamWriter.writeCharacters("\n    ");
+                      xMLStreamWriter.writeStartElement(columnName); // column name
+                      xMLStreamWriter.writeCharacters(columnData.toString().trim());
+                      xMLStreamWriter.writeEndElement(); // column name
+                    }
+                }
+	                
+	                // Use the schema to generate triples, if that's what was given.
+	                if (generateSemTriples && null != schema) {
+
+                      // Get the table name from the metadata -- all columns should have same table name in this version.
+	                  tableName = results.getMetaData().getTableName(1).trim();
+
+	                    // Build triples for each PK-FK pair
+	                    if (null == tableName)
+	                        logger.error("This table doesn't have a name!");
+	                    
+	                    for (RDBColumn pk : schema.tableMap.get(tableName).primary_keys) {
+	                        
+	                        // Generate identifying triple
+	                        SemTriple tableHasRow = new SemTriple();
+	                        tableHasRow.subject = SemTriple.TABLEDATA_NAMESPACE(schema.dbName, tableName) + "/" + results.getString( pk.name.trim() ).trim();
+	                        tableHasRow.predicate = SemTriple.RDB + "instanceOf";
+	                        tableHasRow.object = SemTriple.TABLE_NAMESPACE(schema.dbName, tableName);
+	                        triples.add(tableHasRow);
+	                        
+	                        // Generate relational constraint triple
+	                        for (RDBColumn fk : schema.tableMap.get(tableName).foreign_keys.keySet()) {
+	                            SemTriple rowHasRelationship = new SemTriple();
+	                            String fkName = fk.name.trim();
+	                            
+	                            rowHasRelationship.subject = SemTriple.TABLEDATA_NAMESPACE(schema.dbName, tableName) + "/" + results.getString( pk.name.trim() ).trim();
+	                            rowHasRelationship.predicate = SemTriple.FK + fkName;
+	                            RDBColumn remoteKey = schema.tableMap.get(tableName).foreign_keys.get(fk);
+	                            if (null == results.getString(fkName))
+	                                logger.error(String.format("This FK [%s] doesn't map to a header!", fkName));
+	                            String fkValue = results.getString(fkName);
+	                            rowHasRelationship.object = SemTriple.TABLEDATA_NAMESPACE(schema.dbName, remoteKey.table.tableName) + "/" + fkValue.trim();
+	                            
+	                            if (null != fkValue && fkValue.trim().length() > 0)
+	                                triples.add(rowHasRelationship);
+	                        }
+	                    }
+
+	                    // Write the triples as a batch
+	                    if (null != triples && triples.size() > 0) {
+	                        SemTriple.writeTriple(xMLStreamWriter, triples, true);
+	                        triples.clear();
+	                    }
+	                }
+	    
+	                xMLStreamWriter.writeCharacters("\n  ");
+	                xMLStreamWriter.writeEndElement(); //rowname
+	            }
+	            
+	        } catch (XMLStreamException xse) {
+	            logger.error("ERROR: Unable to write XML file because it was not well-formed.", xse);
+	            
+	        } catch (NullPointerException npe) {
+	            logger.error("ERROR: Failure writing to XMLStreamWriter.", npe);
+	            OutputMonitor.stopTimer();
+	        }
+          catch (SQLException e) {
+            logger.error("ERROR: Failed getting results from SQL table's ResultSet", e);
+          }
+	        
+	        endCurrentFile();
+	        
+	        return numRecordsInCurrentFile;
+	    }
+// end resultset code
+
+	   
+	   
+	
 }
