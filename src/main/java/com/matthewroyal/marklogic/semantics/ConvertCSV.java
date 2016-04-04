@@ -6,6 +6,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.math.BigInteger;
+import java.sql.ResultSet;
 import java.util.Properties;
 
 import org.apache.commons.cli.CommandLine;
@@ -69,7 +71,8 @@ public class ConvertCSV {
   private static String ingestDatabaseType = "MySQL";
   private static String ingestDatabaseUser = "admin";
   private static String ingestDatabasePassword = "admin";
-
+  private static ResultSet rs;
+  private static MySQLConnector mysql;
   // External 
   
   /**
@@ -188,6 +191,102 @@ public class ConvertCSV {
 
   }
 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  //////////////////////////////////////////////////////////
+  
+  
+  /**
+   * Parse a ResultSet from a database and transform it into the destination template
+   * 
+   * @param output
+   *          OutputFormat class representing the format into which the CSV will
+   *          be transformed.
+   */
+  public static void parseRS(OutputFormat output) {
+    
+    try {
+      
+      
+      for (String tableName : mysql.tables) {
+        
+        // Query the table
+        rs = mysql.selectAllFromTable(dbName, tableName);
+        Integer numColumns = rs.getMetaData().getColumnCount();
+        
+
+        try {
+          // Write the new data file
+          if (autogenerateOutputFilenames) {
+            String inputFilename = tableName;
+
+            // Add the appropriate output file extension to the end of the filename
+            if (inputFilename.trim().toLowerCase().lastIndexOf(".csv") == inputFilename.length() - 4) {
+              inputFilename = inputFilename.substring(0, inputFilename.length() - 4) + output.getFileExtension();
+            } else {
+              inputFilename = inputFilename + output.getFileExtension();
+            }
+
+            // Tell the output format class what the output filename should be
+            dataOutputFilename = inputFilename;
+            output.setOutputPath(outputPath, inputFilename);
+          }
+
+          // Transform!
+          OutputFormat.numRecordsInCurrentFile = 0;
+          output.countLineNumber( mysql.estimateTableSize(tableName) );
+
+          // Transform this table to the desired format
+          output.setTableName(tableName);
+          output.transformToFormat(rs);
+          if (null != rs) {
+            rs.close();
+            rs = null;
+          }
+
+        }
+        catch (IOException e) {
+          logger.error(String.format("ERROR: The output file '%s' exists, but \n"
+              + "  1) is a directory rather than a regular file, \n"
+              + "  2) does not exist but cannot be created, or \n"
+              + "  3) cannot be opened for some other reason\n\n",
+              dataOutputFilename), e);
+          callForHelp();
+        }
+
+        
+      }
+    }
+    catch (Exception e) {
+      logger.error("Whoopsadaisy! Failed to read the database schema.", e);
+    }
+
+
+    
+
+  }
+
+
+  
+  
+  
+  
+  //////////////////////////////////////////////////////////
+  
+  
+  
+  
+  
+  
+  
   /**
    * Build the options accepted on the command line
    */
@@ -478,7 +577,7 @@ public class ConvertCSV {
       try {
         // Parse the schema
         if (null != mysqlConnectionString) {
-          MySQLConnector mysql = new MySQLConnector(mysqlConnectionString);
+          mysql = new MySQLConnector(mysqlConnectionString);
           String sqlString = mysql.readDataBaseSchema(dbName);
           model.parseSchemaString(sqlString);
         }
@@ -542,7 +641,10 @@ public class ConvertCSV {
             namespacePrefix, rootElementName, recordElementName,
             generateSemTriples, maxRecordsPerFile, model);
         monitor = new OutputMonitor(output, 5);
-        parseCSV(output);
+        if (null != mysqlConnectionString)
+          parseRS(output);
+        else 
+          parseCSV(output);
         monitor.cancelTimer();
         break;
 

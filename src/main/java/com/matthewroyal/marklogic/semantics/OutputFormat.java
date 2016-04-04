@@ -7,6 +7,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.LineNumberReader;
+import java.math.BigInteger;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -58,6 +60,10 @@ public abstract class OutputFormat {
 	}
 	public void setMaxRecordsPerFile(Integer maxRecordsPerFile) {
 		this.maxRecordsPerFile = maxRecordsPerFile;
+	}
+	
+	public void setTableName(String tableName) {
+	  this.tableName = tableName;
 	}
 
 	/**
@@ -117,7 +123,22 @@ public abstract class OutputFormat {
 		return totalLinesInCsv;
 
 	}
-
+	
+	/**
+	 * Use this BigInteger value as the number of records to process -- 
+	 * this is really only used for the OutputMonitor, so if you have a VERY large table of greater than 2 billion rows,
+	 * the output monitor will either hang at 100% or go higher than 100%. #knownbug 
+	 * @param tableSize BigInteger representing the estimate of the number of rows in a ResultSet
+	 * @return
+	 */
+	public int countLineNumber(BigInteger tableSize) {
+	   
+	  // TODO update to BigInteger some day... probably when I refactor the classes to accept a generalized input class
+	  BigInteger largestInteger = new BigInteger( Integer.toString(Integer.MAX_VALUE) );
+	  totalLinesInCsv = (tableSize.compareTo(largestInteger) <= -1) ? tableSize.intValue() : Integer.MAX_VALUE;
+	  
+	  return totalLinesInCsv;
+	}
 	
 	/**
 	 * Create the output file using the output filename.
@@ -258,6 +279,7 @@ public abstract class OutputFormat {
 	 * @return Integer number of records parsed from CSV file
 	 */
 	public abstract Integer transformToFormat(CSVParser parser) throws IOException;
+	public abstract Integer transformToFormat(ResultSet results) throws IOException;
 	
 	public abstract String getFileExtension();
 	
@@ -276,7 +298,7 @@ public abstract class OutputFormat {
 		
 		// Create the new output file
 		outputFilename = createOutputFile(outputFilename);
-		tableName = null;
+//		tableName = null;
 		bw.write(this.customFileBeginning());
 	}
 	

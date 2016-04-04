@@ -1,6 +1,7 @@
 package com.matthewroyal.marklogic.semantics;
 
 import java.io.IOException;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -153,6 +154,11 @@ public class OutputSemTriple extends OutputFormat {
         
 		return numRecordsInCurrentFile;
 	}
+  @Override
+  public Integer transformToFormat(ResultSet results) throws IOException {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
 
 }

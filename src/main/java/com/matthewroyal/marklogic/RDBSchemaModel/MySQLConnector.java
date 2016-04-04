@@ -308,7 +308,8 @@ public class MySQLConnector {
     String databaseName = "northwind";
     
     try {
-      MySQLConnector mconn = new MySQLConnector("jdbc:mysql://localhost/northwind?" + "user=root&password=admin");
+      String mysqlConnectionString = "jdbc:mysql://localhost/northwind?user=root&password=admin";
+      MySQLConnector mconn = new MySQLConnector(mysqlConnectionString);
       logger.debug( mconn.readDataBaseSchema(databaseName) );
       
       for (String tableName : mconn.tables) {
@@ -347,6 +348,8 @@ public class MySQLConnector {
     catch (Exception e) {
       logger.error("Whoopsadaisy! Failed to read the database schema.", e);
     }
+  
+  
   }
 
 }

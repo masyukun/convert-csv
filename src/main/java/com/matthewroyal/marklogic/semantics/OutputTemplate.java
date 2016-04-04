@@ -3,6 +3,7 @@ package com.matthewroyal.marklogic.semantics;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.sql.ResultSet;
 import java.util.HashMap;
 
 import org.apache.commons.csv.CSVParser;
@@ -120,5 +121,11 @@ public class OutputTemplate extends OutputFormat {
 
 		return numLines;
 	}
+
+  @Override
+  public Integer transformToFormat(ResultSet results) throws IOException {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
 }
