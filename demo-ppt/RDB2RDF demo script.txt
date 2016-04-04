@@ -1,0 +1,46 @@
+java -jar cvs2rdf-2.0.jar 
+	--csv-input-directory data-example/northwind/ 
+	--has-header 
+	--output-format XML 
+	--generate-triples true 
+	--output-filename-auto true 
+	--output-path output/ 
+	--xml-record row 
+	--xml-root table 
+	--sql-file data-example/northwind/northwind.ddl 
+	--schema-output-type SEMTRIPLES 
+	--schema-output-filename northwind-schema.xml
+
+java -jar cvs2rdf-2.0.jar --csv-input-directory data-example/northwind/ --has-header --output-format XML --generate-triples true --output-filename-auto true --output-path output/ --xml-record row --xml-root table --sql-file data-example/northwind/northwind.ddl --schema-output-type SEMTRIPLES --schema-output-filename northwind-schema.xml
+
+
+
+mlcp.sh import -host localhost -port 8123 -username admin -password admin -input_file_path output -mode local
+
+
+
+
+
+
+
+# List all the tables
+SELECT ?table
+WHERE {
+  db:northwind rdb:hasTable ?table .
+}
+
+
+# Which is the most referenced foreign key?
+SELECT ?remoteTable ?remoteKeyname (COUNT(?remoteKeyname) AS ?fkCount)
+WHERE {
+  db:northwind rdb:hasTable ?table .
+  ?table rdb:hasForeignKey ?localKeyID .
+  ?localKeyID rdb:hasLabel ?localKeyname .
+  
+  ?localKeyID rdb:hasForeignKey ?remoteKeyID .
+  ?remoteTable rdb:hasPrimaryKey ?remoteKeyID . 
+  ?remoteKeyID rdb:hasLabel ?remoteKeyname .
+  
+} GROUP BY ?remoteKeyname ORDER BY DESC(?fkCount)
+
+
