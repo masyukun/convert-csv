@@ -28,6 +28,7 @@ out
 /lib/
 /data-example/
 /output/
+/old output/
 
 # OS generated files #
 ######################
