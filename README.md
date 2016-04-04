@@ -1,6 +1,9 @@
 # convert-csv
 Tool to 1) convert relational schemas into MarkLogic sem:triples and 2) convert CSV files into a number of destination formats, including XML, RDF, user-provided template, and MarkLogic sem:triple nodes.
 
+##Background information
+Here is a PowerPoint presentation of the project's technical background. It will be updated periodically, but may lag behind current functionality. There is a demo script in the same folder with a sample workflow that you can adapt to use this tool on your own dataset. https://github.com/masyukun/convert-csv/blob/master/demo-ppt/RDB2RDF.pptx
+
 ##Required libraries:
  - ANTLR 4.4+ Complete and Runtime http://www.antlr.org/download.html
  - Apache Collections 4.0+ https://commons.apache.org/proper/commons-collections/
